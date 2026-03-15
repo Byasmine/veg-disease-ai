@@ -1,0 +1,11 @@
+{
+  "case_id": "case_c17b7defd8c0",
+  "timestamp": "2026-03-15T18:25:42.348332+00:00",
+  "image_id": null,
+  "image_url": null,
+  "predicted_label": "Tomato_mosaic_virus",
+  "correct_label": "Tomato_Yellow_Leaf_Curl_Virus",
+  "confidence": 0.5431,
+  "status": "pending_review",
+  "comment": ""
+}

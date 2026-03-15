@@ -1,0 +1,46 @@
+{
+  "Bacterial_spot": {
+    "summary": "Bacterial spot: small, dark, water-soaked lesions on leaves, stems, or fruit. Caused by Xanthomonas. Favors warm, wet conditions.",
+    "treatment": "Remove affected plant parts. Apply copper-based bactericide. Avoid overhead watering. Use disease-free seed; rotate crops."
+  },
+  "Early_blight": {
+    "summary": "Early blight: brown concentric rings on older leaves, stem cankers. Caused by Alternaria solani.",
+    "treatment": "Apply fungicides (e.g. chlorothalonil). Improve air flow; mulch; avoid wet foliage. Remove infected leaves."
+  },
+  "Late_blight": {
+    "summary": "Late blight: irregular greasy patches, white mold in humidity. Caused by Phytophthora infestans.",
+    "treatment": "Apply fungicides (e.g. copper, specific late-blight products). Destroy severely infected plants; avoid overhead irrigation."
+  },
+  "Leaf_Mold": {
+    "summary": "Leaf mold: yellow patches on upper leaf, fuzzy olive-gray mold underneath. Fungal, thrives in humidity.",
+    "treatment": "Reduce humidity and improve ventilation. Apply fungicide if needed. Remove badly infected leaves."
+  },
+  "Septoria_leaf_spot": {
+    "summary": "Septoria leaf spot: small circular spots with gray centers and dark margins. Fungal.",
+    "treatment": "Remove infected leaves. Apply fungicide (e.g. chlorothalonil). Avoid overhead watering; rotate crops."
+  },
+  "Spider_mites Two-spotted_spider_mite": {
+    "summary": "Two-spotted spider mite: stippling, webbing, leaves can yellow and drop. Mites thrive in hot, dry conditions.",
+    "treatment": "Increase humidity; spray leaves with water. Use miticide or horticultural oil if needed. Remove heavily infested leaves."
+  },
+  "Target_Spot": {
+    "summary": "Target spot: dark concentric rings on leaves and fruit. Fungal (Corynespora).",
+    "treatment": "Apply fungicide. Improve air flow; avoid wet foliage. Remove and destroy severely affected material."
+  },
+  "Tomato_Yellow_Leaf_Curl_Virus": {
+    "summary": "Tomato yellow leaf curl virus: curled, yellowed leaves, stunted growth. Spread by whiteflies.",
+    "treatment": "No cure. Remove infected plants. Control whiteflies; use resistant varieties and virus-free transplants."
+  },
+  "Tomato_mosaic_virus": {
+    "summary": "Tomato mosaic virus: mottled, distorted leaves; reduced yield. Spread by contact and pests.",
+    "treatment": "No cure. Remove infected plants. Disinfect tools; control aphids; use resistant varieties and clean seed."
+  },
+  "healthy": {
+    "summary": "No significant disease detected. Leaf appears healthy.",
+    "treatment": "Continue good practices: even watering, airflow, and monitoring for pests or disease."
+  },
+  "powdery_mildew": {
+    "summary": "Powdery mildew: white powdery patches on leaves. Fungal; common in warm, humid or dry conditions.",
+    "treatment": "Improve air flow; avoid excess nitrogen. Apply sulfur or other fungicide labeled for powdery mildew."
+  }
+}

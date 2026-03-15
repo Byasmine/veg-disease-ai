@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+onnxruntime
+numpy
+pillow
+python-multipart
+openai>=1.0.0
+cloudinary>=1.36.0
+pinecone>=5.0.0
+python-dotenv>=1.0.0
