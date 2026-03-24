@@ -1,0 +1,149 @@
+[
+  {
+    "id": "6578520f-cf0a-4344-a4e1-2eab7c8a7d7d",
+    "userId": "demo_user_mobile",
+    "status": "paid",
+    "paymentMethod": "cash-on-delivery",
+    "items": [
+      {
+        "productId": "prod-seed-tomato-resistant",
+        "productName": "Tomato Resistant Seed Pack",
+        "quantity": 1,
+        "unitPrice": 6.25,
+        "lineTotal": 6.25
+      }
+    ],
+    "total": 6.25,
+    "currency": "USD",
+    "createdAt": "2026-03-23T21:11:00.703Z"
+  },
+  {
+    "id": "13a66024-587a-45cd-8255-7087dfff2d6c",
+    "userId": "demo_user_mobile",
+    "status": "paid",
+    "paymentMethod": "cash-on-delivery",
+    "items": [
+      {
+        "productId": "prod-insecticide-neem",
+        "productName": "Neem Oil Insecticide",
+        "quantity": 3,
+        "unitPrice": 11.5,
+        "lineTotal": 34.5
+      },
+      {
+        "productId": "prod-fertilizer-npk",
+        "productName": "NPK 20-20-20",
+        "quantity": 4,
+        "unitPrice": 18,
+        "lineTotal": 72
+      }
+    ],
+    "total": 106.5,
+    "currency": "USD",
+    "createdAt": "2026-03-23T21:04:48.824Z"
+  },
+  {
+    "id": "4e53774f-41db-4677-8a35-0318192880ee",
+    "userId": "demo_user_mobile",
+    "status": "paid",
+    "paymentMethod": "simulated-card",
+    "items": [
+      {
+        "productId": "prod-fungicide-copper",
+        "productName": "Copper Fungicide",
+        "quantity": 1,
+        "unitPrice": 14.99,
+        "lineTotal": 14.99
+      },
+      {
+        "productId": "prod-fertilizer-npk",
+        "productName": "NPK 20-20-20",
+        "quantity": 1,
+        "unitPrice": 18,
+        "lineTotal": 18
+      }
+    ],
+    "total": 32.99,
+    "currency": "USD",
+    "createdAt": "2026-03-23T21:00:20.920Z"
+  },
+  {
+    "id": "7bc06b9d-a87d-4ea5-a4a3-5861369db3a5",
+    "userId": "demo_user_mobile",
+    "status": "paid",
+    "paymentMethod": "simulated-card",
+    "items": [
+      {
+        "productId": "prod-fungicide-copper",
+        "productName": "Copper Fungicide",
+        "quantity": 3,
+        "unitPrice": 14.99,
+        "lineTotal": 44.97
+      }
+    ],
+    "total": 44.97,
+    "currency": "USD",
+    "createdAt": "2026-03-23T20:59:17.739Z"
+  },
+  {
+    "id": "9f45e646-9539-4861-a24b-9a26c0682340",
+    "userId": "demo_user_mobile",
+    "status": "paid",
+    "paymentMethod": "simulated-card",
+    "items": [
+      {
+        "productId": "prod-seed-tomato-resistant",
+        "productName": "Tomato Resistant Seed Pack",
+        "quantity": 1,
+        "unitPrice": 6.25,
+        "lineTotal": 6.25
+      },
+      {
+        "productId": "prod-fertilizer-npk",
+        "productName": "NPK 20-20-20",
+        "quantity": 1,
+        "unitPrice": 18,
+        "lineTotal": 18
+      }
+    ],
+    "total": 24.25,
+    "currency": "USD",
+    "createdAt": "2026-03-23T20:52:44.763Z"
+  },
+  {
+    "id": "9f4be893-35de-4766-b0dd-38351e55d62f",
+    "userId": "demo_user_mobile",
+    "status": "paid",
+    "paymentMethod": "simulated-card",
+    "items": [
+      {
+        "productId": "prod-insecticide-neem",
+        "productName": "Neem Oil Insecticide",
+        "quantity": 1,
+        "unitPrice": 11.5,
+        "lineTotal": 11.5
+      }
+    ],
+    "total": 11.5,
+    "currency": "USD",
+    "createdAt": "2026-03-23T20:50:16.299Z"
+  },
+  {
+    "id": "80fa1c23-d9c4-4489-ba49-172313b5f22a",
+    "userId": "demo_user_mobile",
+    "status": "paid",
+    "paymentMethod": "simulated-card",
+    "items": [
+      {
+        "productId": "prod-fungicide-copper",
+        "productName": "Copper Fungicide",
+        "quantity": 1,
+        "unitPrice": 14.99,
+        "lineTotal": 14.99
+      }
+    ],
+    "total": 14.99,
+    "currency": "USD",
+    "createdAt": "2026-03-23T20:17:27.082Z"
+  }
+]

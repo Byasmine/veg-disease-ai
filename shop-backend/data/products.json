@@ -1,0 +1,42 @@
+[
+  {
+    "id": "prod-fungicide-copper",
+    "categoryId": "cat-pesticides",
+    "name": "Copper Fungicide",
+    "description": "Broad-spectrum fungicide for leaf spot and blight management.",
+    "price": 14.99,
+    "stock": 120,
+    "currency": "USD",
+    "imageUrl": "https://images.unsplash.com/photo-1589923158776-cb4485d99fd6"
+  },
+  {
+    "id": "prod-insecticide-neem",
+    "categoryId": "cat-pesticides",
+    "name": "Neem Oil Insecticide",
+    "description": "Natural pest control for whiteflies, aphids, and mites.",
+    "price": 11.5,
+    "stock": 75,
+    "currency": "USD",
+    "imageUrl": "https://images.unsplash.com/photo-1615485291234-9fbc8f0f1a36"
+  },
+  {
+    "id": "prod-seed-tomato-resistant",
+    "categoryId": "cat-seeds",
+    "name": "Tomato Resistant Seed Pack",
+    "description": "Disease-resistant tomato hybrid seeds for improved yield.",
+    "price": 6.25,
+    "stock": 200,
+    "currency": "USD",
+    "imageUrl": "https://images.unsplash.com/photo-1598515213962-8fdf28ecbcf9"
+  },
+  {
+    "id": "prod-fertilizer-npk",
+    "categoryId": "cat-fertilizers",
+    "name": "NPK 20-20-20",
+    "description": "Balanced water-soluble fertilizer for vegetative and fruiting stages.",
+    "price": 18.0,
+    "stock": 90,
+    "currency": "USD",
+    "imageUrl": "https://images.unsplash.com/photo-1464226184884-fa280b87c399"
+  }
+]

@@ -34,6 +34,9 @@ interface SidebarItem {
 const ITEMS: SidebarItem[] = [
   { icon: 'home-outline', label: 'Welcome', route: 'Welcome' },
   { icon: 'scan-outline', label: 'Analyze', route: 'Home' },
+  { icon: 'storefront-outline', label: 'Shop', route: 'Shop' },
+  { icon: 'cart-outline', label: 'Cart', route: 'Cart' },
+  { icon: 'receipt-outline', label: 'Orders', route: 'Orders' },
   { icon: 'time-outline', label: 'History', route: 'History' },
   { icon: 'help-circle-outline', label: 'Help', route: 'Help' },
   { icon: 'information-circle-outline', label: 'About', route: 'About' },

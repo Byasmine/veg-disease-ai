@@ -1,0 +1,6 @@
+[
+  { "id": "cat-fertilizers", "name": "Fertilizers", "description": "NPK and micronutrient products" },
+  { "id": "cat-pesticides", "name": "Pesticides", "description": "Fungicides, insecticides, and control solutions" },
+  { "id": "cat-seeds", "name": "Seeds", "description": "Certified, disease-resistant seeds" },
+  { "id": "cat-tools", "name": "Tools", "description": "Sprayers, pruners, and field tools" }
+]
