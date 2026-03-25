@@ -1,5 +1,7 @@
-// Load .env first so EXPO_PUBLIC_* are available (Expo sometimes loads config before .env)
-require('dotenv').config();
+const path = require('path');
+
+// Always load mobile/.env (cwd may be repo root or another folder when Expo runs)
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 function resolveUrl(rawValue, fallback) {
   const raw = String(rawValue || '').trim();
@@ -8,7 +10,7 @@ function resolveUrl(rawValue, fallback) {
 }
 
 const apiUrl = resolveUrl(process.env.EXPO_PUBLIC_API_URL, 'https://veg-disease-ai-production.up.railway.app');
-const shopApiUrl = resolveUrl(process.env.EXPO_PUBLIC_SHOP_API_URL, 'http://localhost:8082');
+const shopApiUrl = resolveUrl(process.env.EXPO_PUBLIC_SHOP_API_URL, 'https://shop-backend-agilicis-leafdoctor.up.railway.app');
 
 const { expo } = require('./app.json');
 

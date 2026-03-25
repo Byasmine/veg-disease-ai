@@ -294,15 +294,32 @@ async function checkout(userId, paymentMethod = 'simulated-card', shipping = {})
         order,
         customerName,
       });
-      await sendMail({
+      const mailResult = await sendMail({
         to: userEmail,
         subject: `Your Leaf Doctor order #${orderId.slice(0, 8)} is confirmed`,
         text: `Your order #${orderId} is confirmed.\n\nTotal: $${Number(order.total || 0).toFixed(2)}\nStatus: ${order.status}\n`,
         html,
       });
+      if (mailResult?.skipped) {
+        console.warn(
+          `[email] Order confirmation skipped (reason=${mailResult.reason}) for order=${orderId} to=${userEmail}`
+        );
+      } else {
+        const messageId = mailResult?.info?.messageId || 'unknown';
+        console.info(`[email] Order confirmation sent order=${orderId} to=${userEmail} messageId=${messageId}`);
+      }
     } catch (e) {
       // Don't fail checkout if email sending fails.
-      console.warn('[email] Order confirmation email failed:', e?.message || e);
+      const details = {
+        message: e?.message || String(e),
+        code: e?.code,
+        responseCode: e?.responseCode,
+        response: e?.response,
+        command: e?.command,
+      };
+      console.warn(
+        `[email] Order confirmation email failed order=${orderId} to=${userEmail}: ${JSON.stringify(details)}`
+      );
     }
   }
 

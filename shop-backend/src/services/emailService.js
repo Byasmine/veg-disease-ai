@@ -32,9 +32,10 @@ async function sendMail({ to, subject, text, html }) {
     console.warn(`Subject: ${subject}`);
     console.warn(text || '');
     console.warn('================================================================\n');
-    return;
+    return { skipped: true, reason: 'smtp_not_configured' };
   }
-  await transport.sendMail({ from, to, subject, text, html });
+  const info = await transport.sendMail({ from, to, subject, text, html });
+  return { skipped: false, info };
 }
 
 module.exports = { sendMail };

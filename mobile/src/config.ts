@@ -67,14 +67,26 @@ function mapLocalhostForAndroid(url: string): string {
   return url;
 }
 
+/**
+ * Prefer EXPO_PUBLIC_* from the JS bundle over `expo.extra`.
+ * On web, `expo-constants` can embed an `extra` snapshot where `shopApiUrl` stays at
+ * `http://localhost:8082` while Metro has the real URL — reading `extra` first would win.
+ * Use direct `process.env.EXPO_PUBLIC_*` (not dynamic keys) so Expo's Babel transform
+ * can inline values at bundle time.
+ */
+function envThenExtra(envValue: string | undefined, extraValue: unknown): string {
+  const fromEnv = typeof process !== 'undefined' ? String(envValue ?? '').trim() : '';
+  if (fromEnv) return fromEnv;
+  return String(extraValue ?? '').trim();
+}
+
 const rawApi = resolveUrl(
-  Constants.expoConfig?.extra?.apiUrl ?? (typeof process !== 'undefined' ? process.env?.EXPO_PUBLIC_API_URL : ''),
+  envThenExtra(process.env.EXPO_PUBLIC_API_URL, Constants.expoConfig?.extra?.apiUrl),
   'http://localhost:8000'
 );
 
 const rawShop = resolveUrl(
-  Constants.expoConfig?.extra?.shopApiUrl ??
-    (typeof process !== 'undefined' ? process.env?.EXPO_PUBLIC_SHOP_API_URL : ''),
+  envThenExtra(process.env.EXPO_PUBLIC_SHOP_API_URL, Constants.expoConfig?.extra?.shopApiUrl),
   'http://localhost:8082'
 );
 
