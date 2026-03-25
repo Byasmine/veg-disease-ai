@@ -23,6 +23,11 @@ function getTransport() {
   });
 }
 
+/** True when SMTP_HOST is set (Railway health check; does not verify login or delivery). */
+function isSmtpConfigured() {
+  return getTransport() != null;
+}
+
 async function sendMail({ to, subject, text, html }) {
   const from = process.env.EMAIL_FROM || 'Leaf Doctor <noreply@leafdoctor.local>';
   const transport = getTransport();
@@ -38,4 +43,4 @@ async function sendMail({ to, subject, text, html }) {
   return { skipped: false, info };
 }
 
-module.exports = { sendMail };
+module.exports = { sendMail, isSmtpConfigured };

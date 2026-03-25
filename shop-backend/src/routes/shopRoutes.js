@@ -1,11 +1,16 @@
 const express = require('express');
 const { requireAuth } = require('../middleware/auth');
 const shop = require('../services/shopService');
+const { isSmtpConfigured } = require('../services/emailService');
 
 const router = express.Router();
 
 router.get('/health', (_req, res) => {
-  res.json({ status: 'ok', service: 'shop-backend' });
+  res.json({
+    status: 'ok',
+    service: 'shop-backend',
+    smtpConfigured: isSmtpConfigured(),
+  });
 });
 
 router.get('/categories', async (_req, res, next) => {
