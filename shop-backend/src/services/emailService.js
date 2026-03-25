@@ -32,14 +32,18 @@ async function sendMail({ to, subject, text, html }) {
   const from = process.env.EMAIL_FROM || 'Leaf Doctor <noreply@leafdoctor.local>';
   const transport = getTransport();
   if (!transport) {
-    console.warn('\n========== [email:dev] SMTP not configured — OTP below ==========');
-    console.warn(`To: ${to}`);
-    console.warn(`Subject: ${subject}`);
-    console.warn(text || '');
-    console.warn('================================================================\n');
+    console.warn(
+      `[email] SMTP not configured (set SMTP_HOST on the server); skipping send to=${to} subject=${subject}`
+    );
+    console.warn('[email] dev fallback — message body below');
+    console.warn(text || html || '');
     return { skipped: true, reason: 'smtp_not_configured' };
   }
   const info = await transport.sendMail({ from, to, subject, text, html });
+  const messageId = info?.messageId ?? 'unknown';
+  console.log(
+    `[email] SMTP accepted message messageId=${messageId} to=${to} subject=${String(subject).slice(0, 80)}`
+  );
   return { skipped: false, info };
 }
 

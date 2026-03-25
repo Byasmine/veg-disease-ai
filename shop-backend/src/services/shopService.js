@@ -294,6 +294,7 @@ async function checkout(userId, paymentMethod = 'simulated-card', shipping = {})
         order,
         customerName,
       });
+      console.log(`[email] order confirmation: sending order=${orderId} userId=${userId} to=${userEmail}`);
       const mailResult = await sendMail({
         to: userEmail,
         subject: `Your Leaf Doctor order #${orderId.slice(0, 8)} is confirmed`,
@@ -302,11 +303,8 @@ async function checkout(userId, paymentMethod = 'simulated-card', shipping = {})
       });
       if (mailResult?.skipped) {
         console.warn(
-          `[email] Order confirmation skipped (reason=${mailResult.reason}) for order=${orderId} to=${userEmail}`
+          `[email] order confirmation skipped (reason=${mailResult.reason}) order=${orderId} to=${userEmail}`
         );
-      } else {
-        const messageId = mailResult?.info?.messageId || 'unknown';
-        console.info(`[email] Order confirmation sent order=${orderId} to=${userEmail} messageId=${messageId}`);
       }
     } catch (e) {
       // Don't fail checkout if email sending fails.
@@ -318,9 +316,13 @@ async function checkout(userId, paymentMethod = 'simulated-card', shipping = {})
         command: e?.command,
       };
       console.warn(
-        `[email] Order confirmation email failed order=${orderId} to=${userEmail}: ${JSON.stringify(details)}`
+        `[email] order confirmation failed order=${orderId} to=${userEmail}: ${JSON.stringify(details)}`
       );
     }
+  } else if (order && !userEmail) {
+    console.warn(
+      `[email] order confirmation skipped: user has no email in DB userId=${userId} order=${orderId}`
+    );
   }
 
   if (order) {
