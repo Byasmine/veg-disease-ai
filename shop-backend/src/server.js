@@ -51,7 +51,8 @@ app.post('/test-email', async (req, res) => {
     const testHtml = html || '<p>Test email from Leaf Doctor</p>';
 
     const response = await sendEmail(to, testSubject, testHtml, text);
-    return res.json({ ok: true, id: response?.id ?? response?.messageId ?? null });
+    const id = response?.id ?? response?.messageId ?? null;
+    return res.json({ ok: true, id });
   } catch (e) {
     return res.status(500).json({ ok: false, message: e?.message || String(e) });
   }

@@ -86,10 +86,18 @@ async function sendEmail(to, subject, html, text) {
       };
       if (text) payload.text = text;
 
-      const response = await resend.emails.send(payload);
-      const id = response?.id ?? response?.messageId ?? 'unknown';
+      // Resend Node SDK returns { data, error, headers } — it does NOT throw on 4xx/validation errors.
+      const result = await resend.emails.send(payload);
+      if (result?.error) {
+        const errMsg =
+          typeof result.error?.message === 'string'
+            ? result.error.message
+            : JSON.stringify(result.error);
+        throw new Error(`Resend API rejected send: ${errMsg}`);
+      }
+      const id = result?.data?.id ?? 'unknown';
       console.info(`[email] Resend accepted message id=${id} to=${to} subject=${String(subject).slice(0, 80)}`);
-      return response;
+      return result.data ?? { id };
     } catch (e) {
       console.error(
         `[email] Resend send failed to=${to} subject=${String(subject).slice(0, 80)}: ${e?.message || String(e)}`
