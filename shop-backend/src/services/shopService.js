@@ -1,7 +1,5 @@
 const { v4: uuidv4 } = require('uuid');
 const { getPool } = require('../db/pool');
-const { sendEmail } = require('./emailService');
-const { orderConfirmationEmailTemplate } = require('./emailTemplates');
 
 function mapProductRow(row) {
   if (!row) return null;
@@ -205,8 +203,6 @@ async function checkout(userId, paymentMethod = 'simulated-card', shipping = {})
   const pool = getPool();
   const orderId = uuidv4();
   const client = await pool.connect();
-  let userEmail = null;
-  let customerName = '';
 
   try {
     await client.query('BEGIN');
@@ -233,8 +229,6 @@ async function checkout(userId, paymentMethod = 'simulated-card', shipping = {})
       [userId]
     );
     const u = urows[0] || {};
-    userEmail = u.email;
-    customerName = u.full_name || u.fullName || '';
 
     const shipName = shipping.shippingName ?? shipping.fullName ?? u.full_name ?? '';
     const shipPhone = shipping.shippingPhone ?? shipping.phone ?? u.phone ?? '';
@@ -288,46 +282,6 @@ async function checkout(userId, paymentMethod = 'simulated-card', shipping = {})
   }
 
   const order = await getOrderById(userId, orderId);
-  if (order && userEmail) {
-    try {
-      const html = orderConfirmationEmailTemplate({
-        order,
-        customerName,
-      });
-      console.log(`[email] order confirmation: sending order=${orderId} userId=${userId} to=${userEmail}`);
-      const mailResult = await sendEmail(
-        userEmail,
-        `Your Leaf Doctor order #${orderId.slice(0, 8)} is confirmed`,
-        html,
-        `Your order #${orderId} is confirmed.\n\nTotal: $${Number(order.total || 0).toFixed(2)}\nStatus: ${order.status}\n`
-      );
-      if (mailResult?.skipped) {
-        console.warn(
-          `[email] order confirmation skipped (reason=${mailResult.reason}) order=${orderId} to=${userEmail}`
-        );
-      }
-    } catch (e) {
-      // Don't fail checkout if email sending fails.
-      const details = {
-        message: e?.message || String(e),
-        code: e?.code,
-        responseCode: e?.responseCode,
-        response: e?.response,
-        command: e?.command,
-      };
-      console.warn(
-        `[email] order confirmation failed order=${orderId} to=${userEmail}: ${JSON.stringify(details)}`
-      );
-    }
-  } else if (order && !userEmail) {
-    console.warn(
-      `[email] order confirmation skipped: user has no email in DB userId=${userId} order=${orderId}`
-    );
-  }
-
-  if (order) {
-    // Notifications intentionally disabled/removed (rollback).
-  }
   return order;
 }
 

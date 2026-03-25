@@ -12,9 +12,6 @@ import { HistoryDetailScreen } from '../screens/HistoryDetailScreen';
 import { HelpScreen } from '../screens/HelpScreen';
 import { AboutScreen } from '../screens/AboutScreen';
 import { AuthScreen } from '../screens/AuthScreen';
-import { VerifySignupScreen } from '../screens/VerifySignupScreen';
-import { ForgotPasswordScreen } from '../screens/ForgotPasswordScreen';
-import { ResetPasswordScreen } from '../screens/ResetPasswordScreen';
 import { ShopScreen } from '../screens/ShopScreen';
 import { CartScreen } from '../screens/CartScreen';
 import { CheckoutScreen } from '../screens/CheckoutScreen';
@@ -42,9 +39,6 @@ const headerStyles = StyleSheet.create({
 export type RootStackParamList = {
   MainTabs: undefined;
   Auth: undefined;
-  VerifySignup: { email: string };
-  ForgotPassword: undefined;
-  ResetPassword: { email?: string };
   Welcome: undefined;
   Home: undefined;
   Result: { imageUri: string; result: PredictionResponse };
@@ -91,48 +85,6 @@ export function RootNavigator() {
     >
       <Stack.Screen name="MainTabs" component={MainTabNavigator} options={{ headerShown: false }} />
       <Stack.Screen name="Auth" component={AuthScreen} options={{ headerShown: false }} />
-      <Stack.Screen
-        name="VerifySignup"
-        component={VerifySignupScreen}
-        options={({ navigation }) => ({
-          headerTitle: () => <HeaderTitle icon="lock-closed-outline" title="Verify email" />,
-          headerLeft: () =>
-            navigation.canGoBack() ? (
-              <TouchableOpacity onPress={() => navigation.goBack()} style={headerStyles.headerLeft} hitSlop={12}>
-                <Ionicons name="arrow-back" size={24} color={colors.textOnOlive} />
-              </TouchableOpacity>
-            ) : null,
-          headerRight: () => <MenuButton />,
-        })}
-      />
-      <Stack.Screen
-        name="ForgotPassword"
-        component={ForgotPasswordScreen}
-        options={({ navigation }) => ({
-          headerTitle: () => <HeaderTitle icon="lock-closed-outline" title="Forgot password" />,
-          headerLeft: () =>
-            navigation.canGoBack() ? (
-              <TouchableOpacity onPress={() => navigation.goBack()} style={headerStyles.headerLeft} hitSlop={12}>
-                <Ionicons name="arrow-back" size={24} color={colors.textOnOlive} />
-              </TouchableOpacity>
-            ) : null,
-          headerRight: () => <MenuButton />,
-        })}
-      />
-      <Stack.Screen
-        name="ResetPassword"
-        component={ResetPasswordScreen}
-        options={({ navigation }) => ({
-          headerTitle: () => <HeaderTitle icon="lock-closed-outline" title="New password" />,
-          headerLeft: () =>
-            navigation.canGoBack() ? (
-              <TouchableOpacity onPress={() => navigation.goBack()} style={headerStyles.headerLeft} hitSlop={12}>
-                <Ionicons name="arrow-back" size={24} color={colors.textOnOlive} />
-              </TouchableOpacity>
-            ) : null,
-          headerRight: () => <MenuButton />,
-        })}
-      />
       <Stack.Screen name="Welcome" component={WelcomeScreen} options={{ headerShown: false }} />
       <Stack.Screen
         name="Home"

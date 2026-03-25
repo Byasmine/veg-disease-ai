@@ -30,7 +30,7 @@ function authErrorMessage(error: unknown): string {
 
 export function AuthScreen() {
   const navigation = useNavigation<Nav>();
-  const { signIn, startRegistration } = useAuth();
+  const { signIn, registerAccount } = useAuth();
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -66,7 +66,7 @@ export function AuthScreen() {
         if (navigation.canGoBack()) navigation.goBack();
         else navigation.navigate('MainTabs');
       } else {
-        const { email: regEmail, message } = await startRegistration({
+        await registerAccount({
           email,
           password,
           fullName,
@@ -77,8 +77,9 @@ export function AuthScreen() {
           postalCode,
           country,
         });
-        Toast.show({ type: 'success', text1: 'Check your email', text2: message });
-        navigation.navigate('VerifySignup', { email: regEmail });
+        Toast.show({ type: 'success', text1: 'Account created' });
+        if (navigation.canGoBack()) navigation.goBack();
+        else navigation.navigate('MainTabs');
       }
     } catch (error) {
       Toast.show({ type: 'error', text1: 'Auth error', text2: authErrorMessage(error) });
@@ -194,14 +195,8 @@ export function AuthScreen() {
               </>
             ) : null}
 
-            {mode === 'signin' ? (
-              <TouchableOpacity style={styles.linkRow} onPress={() => navigation.navigate('ForgotPassword')}>
-                <Text style={styles.link}>Forgot password?</Text>
-              </TouchableOpacity>
-            ) : null}
-
             <GradientButton
-              title={mode === 'signin' ? 'Sign in' : 'Continue — verify email'}
+              title={mode === 'signin' ? 'Sign in' : 'Create account'}
               onPress={onSubmit}
               loading={loading}
             />

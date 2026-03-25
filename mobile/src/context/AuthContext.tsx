@@ -4,8 +4,6 @@ import {
   fetchMe,
   loginRequest,
   registerStart,
-  verifySignupRequest,
-  resendSignupOtpRequest,
   changePasswordRequest,
   patchProfileRequest,
   uploadAvatarRequest,
@@ -19,10 +17,8 @@ type AuthContextValue = {
   user: AuthUser | null;
   initializing: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  /** Starts registration; returns server message. Caller should navigate to email verification. */
-  startRegistration: (payload: RegisterProfilePayload) => Promise<{ email: string; message: string }>;
-  completeVerification: (email: string, code: string) => Promise<void>;
-  resendSignupOtp: (email: string) => Promise<void>;
+  /** Registers and signs in immediately (no email verification). */
+  registerAccount: (payload: RegisterProfilePayload) => Promise<void>;
   signOutUser: () => Promise<void>;
   refreshUser: () => Promise<void>;
   updateProfile: (patch: Parameters<typeof patchProfileRequest>[0]) => Promise<void>;
@@ -75,19 +71,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setUser(nextUser);
   }, []);
 
-  const startRegistration = useCallback(async (payload: RegisterProfilePayload) => {
-    return registerStart(payload);
-  }, []);
-
-  const completeVerification = useCallback(async (email: string, code: string) => {
-    const { user: nextUser, token } = await verifySignupRequest(email, code);
+  const registerAccount = useCallback(async (payload: RegisterProfilePayload) => {
+    const { user: nextUser, token } = await registerStart(payload);
     setAccessToken(token);
     await saveStoredToken(token);
     setUser(nextUser);
-  }, []);
-
-  const resendSignupOtp = useCallback(async (email: string) => {
-    await resendSignupOtpRequest(email);
   }, []);
 
   const signOutUser = useCallback(async () => {
@@ -115,28 +103,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
       user,
       initializing,
       signIn,
-      startRegistration,
-      completeVerification,
-      resendSignupOtp,
+      registerAccount,
       signOutUser,
       refreshUser,
       updateProfile,
       uploadAvatar,
       changePassword,
     }),
-    [
-      user,
-      initializing,
-      signIn,
-      startRegistration,
-      completeVerification,
-      resendSignupOtp,
-      signOutUser,
-      refreshUser,
-      updateProfile,
-      uploadAvatar,
-      changePassword,
-    ]
+    [user, initializing, signIn, registerAccount, signOutUser, refreshUser, updateProfile, uploadAvatar, changePassword]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

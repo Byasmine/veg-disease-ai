@@ -24,7 +24,7 @@ app.get('/', (_req, res) => {
     status: 'ok',
     docs: {
       health: '/api/shop/health',
-      auth: '/api/auth (register, verify-signup, login, forgot-password, reset-password, …)',
+      auth: '/api/auth (register, login, change-password, me)',
       user: '/api/user (profile, avatar)',
       categories: '/api/shop/categories',
       products: '/api/shop/products',

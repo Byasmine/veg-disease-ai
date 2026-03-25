@@ -58,12 +58,8 @@ Base: `http://localhost:8082` (or your host).
 
 | Method | Path | Notes |
 |--------|------|--------|
-| POST | `/register` | Start signup (profile + address); sends email OTP |
-| POST | `/verify-signup` | `{ email, code }` → `{ user, token }` |
-| POST | `/resend-signup-otp` | `{ email }` |
-| POST | `/login` | `{ email, password }` (requires verified email) |
-| POST | `/forgot-password` | Sends reset OTP |
-| POST | `/reset-password` | `{ email, code, newPassword }` |
+| POST | `/register` | Profile + address → `{ user, token }` (immediate sign-in; no email/OTP) |
+| POST | `/login` | `{ email, password }` → `{ user, token }` |
 | POST | `/change-password` | Bearer token; `{ currentPassword, newPassword }` |
 | GET | `/me` | Bearer token → current user |
 

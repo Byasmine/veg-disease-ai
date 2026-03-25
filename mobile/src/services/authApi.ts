@@ -77,9 +77,9 @@ function messageFromError(e: unknown, fallback: string): string {
   return fallback;
 }
 
-export async function registerStart(payload: RegisterProfilePayload): Promise<{ email: string; message: string }> {
+export async function registerStart(payload: RegisterProfilePayload): Promise<{ user: AuthUser; token: string }> {
   try {
-    const { data } = await authClient.post<{ email: string; message: string }>('/register', {
+    const { data } = await authClient.post<{ user: AuthUser; token: string }>('/register', {
       email: payload.email.trim(),
       password: payload.password,
       fullName: payload.fullName,
@@ -92,31 +92,7 @@ export async function registerStart(payload: RegisterProfilePayload): Promise<{ 
     });
     return data;
   } catch (e) {
-    throw new Error(messageFromError(e, 'Could not start registration'));
-  }
-}
-
-export async function verifySignupRequest(
-  email: string,
-  code: string
-): Promise<{ user: AuthUser; token: string }> {
-  try {
-    const { data } = await authClient.post<{ user: AuthUser; token: string }>('/verify-signup', {
-      email: email.trim(),
-      code: code.trim(),
-    });
-    return data;
-  } catch (e) {
-    throw new Error(messageFromError(e, 'Verification failed'));
-  }
-}
-
-export async function resendSignupOtpRequest(email: string): Promise<{ message: string }> {
-  try {
-    const { data } = await authClient.post<{ message: string }>('/resend-signup-otp', { email: email.trim() });
-    return data;
-  } catch (e) {
-    throw new Error(messageFromError(e, 'Could not resend code'));
+    throw new Error(messageFromError(e, 'Could not register'));
   }
 }
 
@@ -129,32 +105,6 @@ export async function loginRequest(email: string, password: string): Promise<{ u
     return data;
   } catch (e) {
     throw new Error(messageFromError(e, 'Could not sign in'));
-  }
-}
-
-export async function forgotPasswordRequest(email: string): Promise<{ message: string }> {
-  try {
-    const { data } = await authClient.post<{ message: string }>('/forgot-password', { email: email.trim() });
-    return data;
-  } catch (e) {
-    throw new Error(messageFromError(e, 'Could not send reset email'));
-  }
-}
-
-export async function resetPasswordRequest(
-  email: string,
-  code: string,
-  newPassword: string
-): Promise<{ message: string }> {
-  try {
-    const { data } = await authClient.post<{ message: string }>('/reset-password', {
-      email: email.trim(),
-      code: code.trim(),
-      newPassword,
-    });
-    return data;
-  } catch (e) {
-    throw new Error(messageFromError(e, 'Could not reset password'));
   }
 }
 

@@ -40,7 +40,7 @@ Create **`mobile/.env`** (loaded via `app.config.js`). Restart with `npx expo st
 - **Android emulator:** AI `http://10.0.2.2:8000`, shop `http://10.0.2.2:8082`
 - **Physical device (same Wi‑Fi):** use your PC’s LAN IP for both ports
 
-Auth is **email + password** with **email OTP** to activate new accounts; **forgot password** uses email OTP. No Firebase.
+Auth is **email + password** via `shop-backend` (register signs you in immediately; no email OTP). Use **Change password** in the app when signed in. No Firebase.
 
 Set shop **`PUBLIC_BASE_URL`** to a URL clients can reach (e.g. your PC’s LAN IP or deployed API) so **profile avatars** (`/uploads/avatars/...`) load on devices—not only `http://localhost:8082`.
 
@@ -48,6 +48,6 @@ Set shop **`PUBLIC_BASE_URL`** to a URL clients can reach (e.g. your PC’s LAN 
 
 1. **Shop / home hub** — open categories and products as a guest.
 2. **Sign in** when you want **Analyze**, **cart**, **checkout**, or **orders** (JWT from `shop-backend`).
-3. **Register** → enter OTP from email (or dev server console if SMTP is off) → then sign in.
+3. **Register** → account is created and you are signed in (same as sign-in with JWT).
 4. **Take photo** or **pick from gallery** (Analyze) → `POST /predict-with-reasoning` on the AI backend.
 5. Result screen shows diagnosis, treatment, and optional PDF export.
