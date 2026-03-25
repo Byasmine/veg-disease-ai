@@ -23,18 +23,18 @@ function getTransport() {
   });
 }
 
-async function sendMail({ to, subject, text }) {
+async function sendMail({ to, subject, text, html }) {
   const from = process.env.EMAIL_FROM || 'Leaf Doctor <noreply@leafdoctor.local>';
   const transport = getTransport();
   if (!transport) {
     console.warn('\n========== [email:dev] SMTP not configured — OTP below ==========');
     console.warn(`To: ${to}`);
     console.warn(`Subject: ${subject}`);
-    console.warn(text);
+    console.warn(text || '');
     console.warn('================================================================\n');
     return;
   }
-  await transport.sendMail({ from, to, subject, text });
+  await transport.sendMail({ from, to, subject, text, html });
 }
 
 module.exports = { sendMail };

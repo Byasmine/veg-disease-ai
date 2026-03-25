@@ -1,10 +1,9 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
   LayoutAnimation,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -51,10 +50,6 @@ export function ProductDetailsScreen({ route }: Props) {
   const [related, setRelated] = useState<ShopProduct[]>([]);
   const [relatedLoading, setRelatedLoading] = useState(true);
   const [adding, setAdding] = useState(false);
-
-  useLayoutEffect(() => {
-    navigation.setOptions({ headerShown: false });
-  }, [navigation]);
 
   useEffect(() => {
     setQuantity(1);
@@ -152,17 +147,7 @@ export function ProductDetailsScreen({ route }: Props) {
           </View>
 
           <View style={[styles.topBarOverlay, { paddingTop: insets.top + 8 }]}>
-            <Pressable
-              onPress={() => navigation.goBack()}
-              style={({ pressed }) => [styles.iconCircle, pressed && styles.pressed]}
-              accessibilityRole="button"
-              accessibilityLabel="Go back"
-            >
-              <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
-            </Pressable>
-            {/* <Text style={styles.topTitle} numberOfLines={1}>
-              Product details
-            </Text> */}
+            {/* Native stack header provides back button now. */}
             <View style={styles.iconCircleMuted} />
           </View>
         </View>

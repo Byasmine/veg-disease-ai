@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  FlatList,
   TextInput,
   Platform,
   ActivityIndicator,
@@ -13,17 +14,19 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
 import { GlassCard } from '../../components/GlassCard';
 import { ShopProductCard } from '../../components/shop/ShopProductCard';
 import { colors } from '../../theme/colors';
-import { addShopCartItem, getShopCategories, getShopProducts } from '../../services/shopApi';
+import { addShopCartItem, getShopCart, getShopCategories, getShopProducts } from '../../services/shopApi';
 import type { ShopCategory, ShopProduct } from '../../types/shop';
 import type { ShopStackParamList } from '../../navigation/MainTabNavigator';
 import { useAuth } from '../../context/AuthContext';
 import { goToAuth } from '../../navigation/navigationRef';
+import { showErrorToast } from '../../utils/showApiError';
 
 type Props = { navigation: NativeStackNavigationProp<ShopStackParamList, 'ShopHome'> };
 type PriceBand = 'all' | 'under10' | '10to20' | 'above20';
@@ -58,6 +61,8 @@ export function ShopHomeScreen({ navigation }: Props) {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [addingId, setAddingId] = useState<string | null>(null);
+  const [cartCount, setCartCount] = useState(0);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -66,7 +71,7 @@ export function ShopHomeScreen({ navigation }: Props) {
       setCategories(cats);
       setProducts(prods);
     } catch (e) {
-      Toast.show({ type: 'error', text1: 'Shop unavailable', text2: (e as Error)?.message });
+      showErrorToast(e, { title: 'Shop unavailable', fallback: 'Could not load shop data.' });
     } finally {
       setLoading(false);
     }
@@ -75,6 +80,28 @@ export function ShopHomeScreen({ navigation }: Props) {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Cart badge count (refresh when screen comes into focus).
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      (async () => {
+        if (!user) {
+          setCartCount(0);
+          return;
+        }
+        try {
+          const cart = await getShopCart();
+          if (!cancelled) setCartCount(cart.items?.length ?? 0);
+        } catch {
+          if (!cancelled) setCartCount(0);
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [user?.id])
+  );
 
   const filteredProducts = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -103,14 +130,25 @@ export function ShopHomeScreen({ navigation }: Props) {
     }
     setAddingId(productId);
     try {
-      await addShopCartItem(productId, 1);
+      const cart = await addShopCartItem(productId, 1);
+      setCartCount(cart.items?.length ?? 0);
       Toast.show({ type: 'success', text1: 'Added to cart' });
     } catch (e) {
-      Toast.show({ type: 'error', text1: 'Could not add item', text2: (e as Error)?.message });
+      showErrorToast(e, { title: 'Could not add item', fallback: 'Could not add to cart.' });
     } finally {
       setAddingId(null);
     }
   };
+
+  const categoryIconById = useMemo<Partial<Record<string, keyof typeof Ionicons.glyphMap>>>(
+    () => ({
+      'cat-fertilizers': 'bulb-outline',
+      'cat-pesticides': 'bug-outline',
+      'cat-seeds': 'leaf-outline',
+      'cat-tools': 'medkit-outline',
+    }),
+    []
+  );
 
   const openOrdersTab = () => {
     const parent = navigation.getParent();
@@ -147,13 +185,30 @@ export function ShopHomeScreen({ navigation }: Props) {
               >
                 <Ionicons name="grid-outline" size={22} color={colors.olive} />
               </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.iconBtn}
+                onPress={() => setFiltersOpen(true)}
+                accessibilityLabel="Open filters"
+                activeOpacity={0.85}
+              >
+                <Ionicons name="options-outline" size={22} color={colors.olive} />
+              </TouchableOpacity>
+
               <TouchableOpacity
                 style={styles.iconBtn}
                 onPress={() => navigation.navigate('Cart')}
                 accessibilityLabel="Open cart"
                 activeOpacity={0.85}
               >
-                <Ionicons name="bag-outline" size={22} color={colors.olive} />
+                <View style={styles.cartIconWrap}>
+                  <Ionicons name="bag-outline" size={22} color={colors.olive} />
+                  {cartCount > 0 ? (
+                    <View style={styles.cartBadge} pointerEvents="none">
+                      <Text style={styles.cartBadgeText}>{cartCount > 99 ? '99+' : cartCount}</Text>
+                    </View>
+                  ) : null}
+                </View>
               </TouchableOpacity>
             </View>
           </View>
@@ -179,52 +234,19 @@ export function ShopHomeScreen({ navigation }: Props) {
         </Animated.View>
         </View>
 
-
-        {/* —— Filters: single card, clear hierarchy —— */}
-        <Animated.View entering={FadeInDown.delay(40).duration(240)} style={styles.filterSection}>
-          <View style={styles.filterPanel}>
-            <View style={styles.filterPanelHead}>
-              <Text style={styles.filterPanelTitle}>Refine</Text>
-              {hasActiveFilters ? (
-                <TouchableOpacity onPress={resetFilters} style={styles.resetTextBtn} hitSlop={8}>
-                  <Text style={styles.resetTextBtnLabel}>Clear all</Text>
-                </TouchableOpacity>
-              ) : null}
-            </View>
-
-            <Text style={styles.filterGroupLabel}>Category</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScroll}>
-              <TouchableOpacity
-                style={[styles.chip, selectedCategory === 'all' && styles.chipOn]}
-                onPress={() => setSelectedCategory('all')}
-              >
-                <Text style={[styles.chipLabel, selectedCategory === 'all' && styles.chipLabelOn]}>All</Text>
+        {/* Filter summary bar (sidebar opens from the top-right). */}
+        <Animated.View entering={FadeInDown.delay(40).duration(240)} style={styles.filterBar}>
+          <View style={styles.filterBarInner}>
+            <TouchableOpacity style={styles.filterBarBtn} onPress={() => setFiltersOpen(true)} activeOpacity={0.9}>
+              <Ionicons name="options-outline" size={18} color={colors.olive} />
+              <Text style={styles.filterBarText}>Filters</Text>
+              {hasActiveFilters ? <View style={styles.filterBarDot} /> : null}
+            </TouchableOpacity>
+            {hasActiveFilters ? (
+              <TouchableOpacity onPress={resetFilters} style={styles.filterBarClear} activeOpacity={0.9}>
+                <Text style={styles.filterBarClearText}>Clear</Text>
               </TouchableOpacity>
-              {categories.map((cat) => (
-                <TouchableOpacity
-                  key={cat.id}
-                  style={[styles.chip, selectedCategory === cat.id && styles.chipOn]}
-                  onPress={() => setSelectedCategory(cat.id)}
-                >
-                  <Text style={[styles.chipLabel, selectedCategory === cat.id && styles.chipLabelOn]} numberOfLines={1}>
-                    {cat.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            <Text style={[styles.filterGroupLabel, styles.filterGroupLabelSpaced]}>Price</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScroll}>
-              {PRICE_OPTIONS.map((opt) => (
-                <TouchableOpacity
-                  key={opt.key}
-                  style={[styles.chip, selectedPrice === opt.key && styles.chipOn]}
-                  onPress={() => setSelectedPrice(opt.key)}
-                >
-                  <Text style={[styles.chipLabel, selectedPrice === opt.key && styles.chipLabelOn]}>{opt.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+            ) : null}
           </View>
         </Animated.View>
 
@@ -247,38 +269,42 @@ export function ShopHomeScreen({ navigation }: Props) {
           </View>
         ) : null}
 
-        {!loading &&
-          filteredProducts.map((product, index) => (
-            <Animated.View
-              key={product.id}
-              entering={FadeInDown.delay(Math.min(index * 40, 420)).duration(240)}
-              style={styles.productCardWrap}
-            >
-              <ShopProductCard
-                product={product}
-                categoryLabel={categoryNameForId(categories, product.categoryId)}
-                onProductPress={() => navigation.navigate('ProductDetails', { product })}
-                onAddToCart={() => addToCart(product.id)}
-                loading={addingId === product.id}
-              />
-            </Animated.View>
-          ))}
-
-        {!loading && filteredProducts.length === 0 ? (
-          <Animated.View entering={FadeInDown.duration(280)} style={styles.emptyWrap}>
-            <GlassCard style={styles.emptyCard}>
-              <View style={styles.emptyIconWrap}>
-                <Ionicons name="search-outline" size={28} color={colors.olive} />
-              </View>
-              <Text style={styles.emptyTitle}>Nothing matches</Text>
-              <Text style={styles.emptyText}>Try another search or clear filters to see everything in the store.</Text>
-              {hasActiveFilters ? (
-                <TouchableOpacity style={styles.emptyCta} onPress={resetFilters} activeOpacity={0.9}>
-                  <Text style={styles.emptyCtaText}>Clear filters</Text>
-                </TouchableOpacity>
-              ) : null}
-            </GlassCard>
-          </Animated.View>
+        {!loading ? (
+          <FlatList
+            data={filteredProducts}
+            keyExtractor={(product) => product.id}
+            scrollEnabled={false}
+            renderItem={({ item: product, index }) => (
+              <Animated.View
+                entering={FadeInDown.delay(Math.min(index * 40, 420)).duration(240)}
+                style={styles.productCardWrap}
+              >
+                <ShopProductCard
+                  product={product}
+                  categoryLabel={categoryNameForId(categories, product.categoryId)}
+                  onProductPress={() => navigation.navigate('ProductDetails', { product })}
+                  onAddToCart={() => addToCart(product.id)}
+                  loading={addingId === product.id}
+                />
+              </Animated.View>
+            )}
+            ListEmptyComponent={
+              <Animated.View entering={FadeInDown.duration(280)} style={styles.emptyWrap}>
+                <GlassCard style={styles.emptyCard}>
+                  <View style={styles.emptyIconWrap}>
+                    <Ionicons name="search-outline" size={28} color={colors.olive} />
+                  </View>
+                  <Text style={styles.emptyTitle}>Nothing matches</Text>
+                  <Text style={styles.emptyText}>Try another search or clear filters to see everything in the store.</Text>
+                  {hasActiveFilters ? (
+                    <TouchableOpacity style={styles.emptyCta} onPress={resetFilters} activeOpacity={0.9} accessibilityLabel="Clear filters">
+                      <Text style={styles.emptyCtaText}>Clear filters</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </GlassCard>
+              </Animated.View>
+            }
+          />
         ) : null}
 
         <TouchableOpacity style={styles.footerLink} onPress={openOrdersTab} activeOpacity={0.75}>
@@ -286,6 +312,92 @@ export function ShopHomeScreen({ navigation }: Props) {
           <Text style={styles.footerLinkText}>Order history</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* —— Filters sidebar —— */}
+      {filtersOpen ? (
+        <View style={styles.sidebarOverlay} pointerEvents="box-none">
+          <TouchableOpacity
+            style={styles.sidebarBackdrop}
+            activeOpacity={1}
+            onPress={() => setFiltersOpen(false)}
+            accessibilityLabel="Close filters"
+          />
+          <View style={styles.sidebarPanel}>
+            <GlassCard style={styles.sidebarCard}>
+              <View style={styles.sidebarHead}>
+                <Text style={styles.sidebarTitle}>Filters</Text>
+                <TouchableOpacity
+                  onPress={() => setFiltersOpen(false)}
+                  style={styles.sidebarCloseBtn}
+                  hitSlop={10}
+                  accessibilityLabel="Close filters"
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="close" size={22} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={styles.sidebarBody} showsVerticalScrollIndicator={false}>
+                {hasActiveFilters ? (
+                  <TouchableOpacity
+                    onPress={resetFilters}
+                    style={styles.sidebarClearBtn}
+                    activeOpacity={0.9}
+                    accessibilityLabel="Clear all filters"
+                  >
+                    <Text style={styles.sidebarClearBtnText}>Clear all</Text>
+                  </TouchableOpacity>
+                ) : null}
+
+                <Text style={styles.sidebarGroupLabel}>Category</Text>
+
+                <TouchableOpacity
+                  onPress={() => setSelectedCategory('all')}
+                  style={[styles.sidebarOption, selectedCategory === 'all' && styles.sidebarOptionOn]}
+                >
+                  <Ionicons name="leaf-outline" size={18} color={selectedCategory === 'all' ? colors.textOnOlive : colors.olive} />
+                  <Text style={[styles.sidebarOptionText, selectedCategory === 'all' && styles.sidebarOptionTextOn]}>All</Text>
+                </TouchableOpacity>
+
+                {categories.map((cat) => {
+                  const on = selectedCategory === cat.id;
+                  const iconName = (categoryIconById[cat.id] ?? 'leaf-outline') as keyof typeof Ionicons.glyphMap;
+                  return (
+                    <TouchableOpacity
+                      key={cat.id}
+                      onPress={() => setSelectedCategory(cat.id)}
+                      style={[styles.sidebarOption, on && styles.sidebarOptionOn]}
+                      accessibilityLabel={`Filter category: ${cat.name}`}
+                    >
+                      <Ionicons name={iconName} size={18} color={on ? colors.textOnOlive : colors.olive} />
+                      <Text style={[styles.sidebarOptionText, on && styles.sidebarOptionTextOn]}>{cat.name}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+
+                <Text style={[styles.sidebarGroupLabel, styles.sidebarGroupLabelSpaced]}>Price</Text>
+                {PRICE_OPTIONS.map((opt) => {
+                  const on = selectedPrice === opt.key;
+                  return (
+                    <TouchableOpacity
+                      key={opt.key}
+                      onPress={() => setSelectedPrice(opt.key)}
+                      style={[styles.sidebarOption, on && styles.sidebarOptionOn]}
+                      accessibilityLabel={`Filter price: ${opt.label}`}
+                    >
+                      <Text style={[styles.sidebarOptionText, on && styles.sidebarOptionTextOn]}>{opt.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+
+              <TouchableOpacity style={styles.sidebarDoneBtn} onPress={() => setFiltersOpen(false)} activeOpacity={0.95}>
+                <Text style={styles.sidebarDoneBtnText}>Done</Text>
+              </TouchableOpacity>
+            </GlassCard>
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -391,6 +503,121 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 4,
   },
+  filterBar: {
+    paddingHorizontal: H_PAD,
+    paddingTop: 6,
+    paddingBottom: 6,
+  },
+  filterBarInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  filterBarBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  filterBarText: { fontSize: 14, fontWeight: '800', color: colors.textPrimary },
+  filterBarDot: { width: 10, height: 10, borderRadius: 99, backgroundColor: colors.olive },
+  filterBarClear: { paddingVertical: 10, paddingHorizontal: 10 },
+  filterBarClearText: { fontSize: 14, fontWeight: '800', color: colors.danger },
+
+  cartIconWrap: { position: 'relative' },
+  cartBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 5,
+    borderRadius: 9,
+    backgroundColor: colors.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.card,
+  },
+  cartBadgeText: { color: colors.textOnOlive, fontWeight: '900', fontSize: 11 },
+
+  sidebarOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 50,
+  },
+  sidebarBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.22)' },
+  sidebarPanel: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 300,
+    paddingTop: 10,
+    paddingBottom: 12,
+    paddingHorizontal: 12,
+  },
+  sidebarCard: { flex: 1, padding: 0, overflow: 'hidden' },
+  sidebarHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, paddingBottom: 10 },
+  sidebarTitle: { fontSize: 16, fontWeight: '900', color: colors.textPrimary },
+  sidebarCloseBtn: { padding: 2, borderRadius: 10 },
+  sidebarBody: { flex: 1, paddingHorizontal: 16, paddingBottom: 10 },
+  sidebarClearBtn: {
+    marginBottom: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: colors.creamMuted,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  sidebarClearBtnText: { color: colors.danger, fontWeight: '900' },
+  sidebarGroupLabel: {
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: colors.textSecondary,
+    marginTop: 4,
+    marginBottom: 10,
+  },
+  sidebarGroupLabelSpaced: { marginTop: 18 },
+  sidebarOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 10,
+  },
+  sidebarOptionOn: { backgroundColor: colors.olive, borderColor: colors.olive },
+  sidebarOptionText: { fontSize: 14, fontWeight: '800', color: colors.textPrimary },
+  sidebarOptionTextOn: { color: colors.textOnOlive },
+  sidebarDoneBtn: {
+    margin: 16,
+    marginTop: 0,
+    borderRadius: 16,
+    backgroundColor: colors.olive,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.olive,
+  },
+  sidebarDoneBtnText: { color: colors.textOnOlive, fontWeight: '900', fontSize: 15 },
   filterPanel: {
     backgroundColor: colors.card,
     borderRadius: 18,

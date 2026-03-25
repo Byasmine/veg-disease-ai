@@ -1,5 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 const { getPool } = require('../db/pool');
+const { sendMail } = require('./emailService');
+const { orderConfirmationEmailTemplate } = require('./emailTemplates');
 
 function mapProductRow(row) {
   if (!row) return null;
@@ -110,6 +112,11 @@ async function addCartItem(userId, productId, quantity = 1) {
     err.status = 404;
     throw err;
   }
+  if (product.stock <= 0) {
+    const err = new Error('Product is out of stock');
+    err.status = 409;
+    throw err;
+  }
 
   const pool = getPool();
   const { rows: existing } = await pool.query(
@@ -118,17 +125,19 @@ async function addCartItem(userId, productId, quantity = 1) {
   );
 
   if (existing[0]) {
-    const newQty = existing[0].quantity + qty;
+    const desiredQty = existing[0].quantity + qty;
+    const cappedQty = Math.min(desiredQty, product.stock);
     await pool.query(`UPDATE cart_items SET quantity = $1, unit_price = $2 WHERE id = $3`, [
-      newQty,
+      cappedQty,
       product.price,
       existing[0].id,
     ]);
   } else {
+    const cappedQty = Math.min(qty, product.stock);
     await pool.query(
       `INSERT INTO cart_items (id, user_id, product_id, quantity, unit_price)
        VALUES ($1, $2, $3, $4, $5)`,
-      [uuidv4(), userId, productId, qty, product.price]
+      [uuidv4(), userId, productId, cappedQty, product.price]
     );
   }
 
@@ -144,10 +153,13 @@ async function updateCartItem(userId, itemId, quantity) {
   }
 
   const pool = getPool();
-  const { rows } = await pool.query(`SELECT id FROM cart_items WHERE id = $1 AND user_id = $2`, [
-    itemId,
-    userId,
-  ]);
+  const { rows } = await pool.query(
+    `SELECT ci.id, p.stock, p.name
+     FROM cart_items ci
+     JOIN products p ON p.id = ci.product_id
+     WHERE ci.id = $1 AND ci.user_id = $2`,
+    [itemId, userId]
+  );
   if (!rows[0]) {
     const err = new Error('Cart item not found');
     err.status = 404;
@@ -157,7 +169,14 @@ async function updateCartItem(userId, itemId, quantity) {
   if (qty === 0) {
     await pool.query(`DELETE FROM cart_items WHERE id = $1`, [itemId]);
   } else {
-    await pool.query(`UPDATE cart_items SET quantity = $1 WHERE id = $2`, [qty, itemId]);
+    const currentStock = Number(rows[0].stock ?? 0);
+    const cappedQty = Math.min(qty, currentStock);
+    if (cappedQty <= 0) {
+      // If stock is 0 (or became 0), removing the cart line keeps the cart consistent.
+      await pool.query(`DELETE FROM cart_items WHERE id = $1`, [itemId]);
+    } else {
+      await pool.query(`UPDATE cart_items SET quantity = $1 WHERE id = $2`, [cappedQty, itemId]);
+    }
   }
 
   return getCart(userId);
@@ -186,15 +205,36 @@ async function checkout(userId, paymentMethod = 'simulated-card', shipping = {})
   const pool = getPool();
   const orderId = uuidv4();
   const client = await pool.connect();
+  let userEmail = null;
+  let customerName = '';
 
   try {
     await client.query('BEGIN');
 
+    // Stock management:
+    // Validate and decrement product stock atomically inside the transaction to prevent overselling.
+    for (const i of cart.items) {
+      const { rows: stockRows } = await client.query(`SELECT stock FROM products WHERE id = $1 FOR UPDATE`, [
+        i.productId,
+      ]);
+      const available = Number(stockRows[0]?.stock ?? 0);
+      if (available < i.quantity) {
+        const err = new Error(
+          `Insufficient stock for ${i.product?.name ?? 'item'}. Requested ${i.quantity}, available ${available}.`
+        );
+        err.status = 409;
+        throw err;
+      }
+      await client.query(`UPDATE products SET stock = stock - $1 WHERE id = $2`, [i.quantity, i.productId]);
+    }
+
     const { rows: urows } = await client.query(
-      `SELECT full_name, phone, address_line1, address_line2, city, postal_code, country FROM users WHERE id = $1`,
+      `SELECT email, full_name, phone, address_line1, address_line2, city, postal_code, country FROM users WHERE id = $1`,
       [userId]
     );
     const u = urows[0] || {};
+    userEmail = u.email;
+    customerName = u.full_name || u.fullName || '';
 
     const shipName = shipping.shippingName ?? shipping.fullName ?? u.full_name ?? '';
     const shipPhone = shipping.shippingPhone ?? shipping.phone ?? u.phone ?? '';
@@ -247,7 +287,29 @@ async function checkout(userId, paymentMethod = 'simulated-card', shipping = {})
     client.release();
   }
 
-  return getOrderById(userId, orderId);
+  const order = await getOrderById(userId, orderId);
+  if (order && userEmail) {
+    try {
+      const html = orderConfirmationEmailTemplate({
+        order,
+        customerName,
+      });
+      await sendMail({
+        to: userEmail,
+        subject: `Your Leaf Doctor order #${orderId.slice(0, 8)} is confirmed`,
+        text: `Your order #${orderId} is confirmed.\n\nTotal: $${Number(order.total || 0).toFixed(2)}\nStatus: ${order.status}\n`,
+        html,
+      });
+    } catch (e) {
+      // Don't fail checkout if email sending fails.
+      console.warn('[email] Order confirmation email failed:', e?.message || e);
+    }
+  }
+
+  if (order) {
+    // Notifications intentionally disabled/removed (rollback).
+  }
+  return order;
 }
 
 async function getOrders(userId) {
@@ -305,7 +367,16 @@ async function getOrderById(userId, orderId) {
   const row = rows[0];
   if (!row) return null;
   const { rows: items } = await pool.query(
-    `SELECT product_id, product_name, quantity, unit_price, line_total FROM order_items WHERE order_id = $1`,
+    `SELECT
+       oi.product_id,
+       oi.product_name,
+       oi.quantity,
+       oi.unit_price,
+       oi.line_total,
+       p.image_url
+     FROM order_items oi
+     LEFT JOIN products p ON p.id = oi.product_id
+     WHERE oi.order_id = $1`,
     [orderId]
   );
   return {
@@ -331,6 +402,7 @@ async function getOrderById(userId, orderId) {
       quantity: it.quantity,
       unitPrice: Number(it.unit_price),
       lineTotal: Number(it.line_total),
+      imageUrl: it.image_url || undefined,
     })),
   };
 }

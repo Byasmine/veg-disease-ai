@@ -5,6 +5,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import Toast from 'react-native-toast-message';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { colors } from '../theme/colors';
 import { GlassCard } from '../components/GlassCard';
@@ -14,11 +15,12 @@ import { checkoutShop, getShopCart } from '../services/shopApi';
 import { useAuth } from '../context/AuthContext';
 import { AuthRequiredPrompt } from '../components/AuthRequiredPrompt';
 import { goToAuth } from '../navigation/navigationRef';
+import type { ShopStackParamList } from '../navigation/MainTabNavigator';
 
 type PaymentMethod = 'simulated-card' | 'cash-on-delivery';
 
 export function CheckoutScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<ShopStackParamList, 'Checkout'>>();
   const { user } = useAuth();
   const [cart, setCart] = useState<ShopCart | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -99,15 +101,7 @@ export function CheckoutScreen() {
         shippingPostalCode: shipPostal.trim(),
         shippingCountry: shipCountry.trim() || 'US',
       });
-      Toast.show({
-        type: 'success',
-        text1: 'Order placed',
-        text2:
-          paymentMethod === 'simulated-card'
-            ? `Order #${order.id.slice(0, 8)} paid by simulated card.`
-            : `Order #${order.id.slice(0, 8)} confirmed. Pay cash on delivery.`,
-      });
-      await load();
+      navigation.navigate('OrderPaid', { orderId: order.id });
     } catch (e) {
       Toast.show({ type: 'error', text1: 'Checkout failed', text2: (e as Error)?.message });
     } finally {
@@ -133,7 +127,7 @@ export function CheckoutScreen() {
       <Animated.View entering={FadeInDown.duration(250)}>
         <GlassCard style={styles.card}>
           <Text style={styles.title}>Checkout</Text>
-          <Text style={styles.subtitle}>Confirm shipping and payment (demo).</Text>
+          <Text style={styles.subtitle}>Confirm shipping and payment.</Text>
         </GlassCard>
       </Animated.View>
 
@@ -230,7 +224,7 @@ export function CheckoutScreen() {
                   paymentMethod === 'simulated-card' && styles.paymentOptionTextActive,
                 ]}
               >
-                Credit Card (simulated)
+                Credit Card
               </Text>
             </TouchableOpacity>
 
@@ -257,7 +251,7 @@ export function CheckoutScreen() {
           {paymentMethod === 'simulated-card' ? (
             <View style={styles.cardForm}>
               <View style={styles.paymentPill}>
-                <Text style={styles.paymentText}>Card simulation only (no real charge)</Text>
+                <Text style={styles.paymentText}>Enter your card details to place the order.</Text>
               </View>
               <TextInput
                 value={cardNumber}
@@ -304,7 +298,7 @@ export function CheckoutScreen() {
           </View>
 
           <GradientButton
-            title={paymentMethod === 'simulated-card' ? 'Pay now (simulated)' : 'Place COD order'}
+            title={paymentMethod === 'simulated-card' ? 'Pay now' : 'Place COD order'}
             onPress={placeOrder}
             loading={submitting}
             disabled={!items.length || submitting}

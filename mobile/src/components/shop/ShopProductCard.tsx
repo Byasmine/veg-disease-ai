@@ -63,6 +63,9 @@ export function ShopProductCard({
   const { width: winW } = useWindowDimensions();
   const [favorite, setFavorite] = useState(false);
   const badge = useMemo(() => badgeForProduct(product), [product]);
+  const formattedPrice = `${product.price.toFixed(2)}${
+    product.currency && product.currency !== 'USD' ? ` ${product.currency}` : ''
+  }`;
 
   /** One image fills this full-height frame. */
   const imageFrameHeight =
@@ -111,10 +114,6 @@ export function ShopProductCard({
         <Text style={styles.title} numberOfLines={2}>
           {product.name}
         </Text>
-        <Text style={styles.price}>
-          ${product.price.toFixed(2)}
-          {product.currency && product.currency !== 'USD' ? ` ${product.currency}` : ''}
-        </Text>
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -132,10 +131,29 @@ export function ShopProductCard({
           {loading ? (
             <ActivityIndicator color={colors.textOnOlive} />
           ) : (
-            <Text style={styles.ctaText}>{out ? 'Out of stock' : addToCartLabel}</Text>
+            <View style={styles.ctaRow}>
+              <Ionicons
+                name={out ? 'warning-outline' : 'cart-outline'}
+                size={18}
+                color={colors.textOnOlive}
+              />
+              <Text style={styles.ctaStatusText} numberOfLines={1}>
+                {out ? 'Unavailable' : 'Add'}
+              </Text>
+              <Text style={styles.ctaPriceText} numberOfLines={1}>
+                ${formattedPrice}
+              </Text>
+            </View>
           )}
         </LinearGradient>
       </TouchableOpacity>
+
+      <View style={styles.stockRow} pointerEvents="none">
+        <View style={[styles.stockDot, out ? styles.stockDotOut : styles.stockDotIn]} />
+        <Text style={[styles.stockText, out ? styles.stockTextOut : styles.stockTextIn]}>
+          {out ? 'Out of stock' : 'In stock'}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -226,11 +244,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     letterSpacing: -0.2,
   },
-  price: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
   ctaOuter: {
     borderRadius: 999,
     overflow: 'hidden',
@@ -254,10 +267,14 @@ const styles = StyleSheet.create({
   ctaDisabled: {
     opacity: 0.5,
   },
-  ctaText: {
-    color: colors.textOnOlive,
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.2,
-  },
+  ctaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  ctaStatusText: { color: colors.textOnOlive, fontSize: 14, fontWeight: '800', letterSpacing: 0.2 },
+  ctaPriceText: { color: colors.textOnOlive, fontSize: 14, fontWeight: '800' },
+  stockRow: { marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4 },
+  stockDot: { width: 8, height: 8, borderRadius: 99 },
+  stockDotIn: { backgroundColor: colors.success },
+  stockDotOut: { backgroundColor: colors.danger },
+  stockText: { fontSize: 12, fontWeight: '700' },
+  stockTextIn: { color: colors.success },
+  stockTextOut: { color: colors.danger },
 });

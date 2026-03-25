@@ -17,6 +17,16 @@ shopClient.interceptors.request.use((config) => {
   return config;
 });
 
+shopClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Surface backend `message` in the toast `error.message`.
+    const msg = error?.response?.data?.message;
+    if (msg && typeof msg === 'string') error.message = msg;
+    return Promise.reject(error);
+  }
+);
+
 export async function getShopCategories(): Promise<ShopCategory[]> {
   const { data } = await shopClient.get<ShopCategory[]>('/categories');
   return Array.isArray(data) ? data : [];
@@ -73,4 +83,9 @@ export async function checkoutShop(
 export async function getShopOrders(): Promise<ShopOrder[]> {
   const { data } = await shopClient.get<ShopOrder[]>('/orders');
   return Array.isArray(data) ? data : [];
+}
+
+export async function getShopOrderById(orderId: string): Promise<ShopOrder> {
+  const { data } = await shopClient.get<ShopOrder>(`/orders/${orderId}`);
+  return data;
 }

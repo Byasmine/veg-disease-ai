@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
@@ -11,6 +11,7 @@ import type { ShopProduct } from '../../types/shop';
 import type { ShopStackParamList } from '../../navigation/MainTabNavigator';
 import { useAuth } from '../../context/AuthContext';
 import { goToAuth } from '../../navigation/navigationRef';
+import { showErrorToast } from '../../utils/showApiError';
 
 type Props = {
   navigation: NativeStackNavigationProp<ShopStackParamList, 'ProductList'>;
@@ -29,7 +30,7 @@ export function ProductListScreen({ navigation, route }: Props) {
       const data = await getShopProducts(categoryId ? { categoryId } : undefined);
       setProducts(data);
     } catch (e) {
-      Toast.show({ type: 'error', text1: 'Could not load products', text2: (e as Error)?.message });
+      showErrorToast(e, { title: 'Could not load products', fallback: 'Please try again.' });
     }
   }, [categoryId]);
 
@@ -48,19 +49,29 @@ export function ProductListScreen({ navigation, route }: Props) {
       await addShopCartItem(productId, 1);
       Toast.show({ type: 'success', text1: 'Added to cart' });
     } catch (e) {
-      Toast.show({ type: 'error', text1: 'Could not add item', text2: (e as Error)?.message });
+      showErrorToast(e, { title: 'Could not add item', fallback: 'Please try again.' });
     } finally {
       setAddingId(null);
     }
   };
 
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      <Text style={styles.categoryTitle}>{categoryName}</Text>
-      <Text style={styles.categorySub}>{products.length} {products.length === 1 ? 'item' : 'items'}</Text>
-      {products.map((product) => (
+    <FlatList
+      style={styles.scroll}
+      contentContainerStyle={styles.content}
+      data={products}
+      keyExtractor={(p) => p.id}
+      showsVerticalScrollIndicator={false}
+      ListHeaderComponent={
+        <View>
+          <Text style={styles.categoryTitle}>{categoryName}</Text>
+          <Text style={styles.categorySub}>
+            {products.length} {products.length === 1 ? 'item' : 'items'}
+          </Text>
+        </View>
+      }
+      renderItem={({ item: product }) => (
         <ShopProductCard
-          key={product.id}
           product={product}
           categoryLabel={categoryName}
           onProductPress={() => navigation.navigate('ProductDetails', { product })}
@@ -68,13 +79,13 @@ export function ProductListScreen({ navigation, route }: Props) {
           loading={addingId === product.id}
           style={styles.cardSpacing}
         />
-      ))}
-      {products.length === 0 ? (
+      )}
+      ListEmptyComponent={
         <View style={styles.empty}>
           <Text style={styles.emptyText}>No products in this list yet.</Text>
         </View>
-      ) : null}
-    </ScrollView>
+      }
+    />
   );
 }
 

@@ -30,6 +30,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: colors.border,
+    backgroundColor: colors.card,
     ...Platform.select({
       ios: { shadowColor: colors.taupe, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.15, shadowRadius: 14 },
       android: { elevation: 6 },
@@ -37,11 +38,12 @@ const styles = StyleSheet.create({
     }),
   },
   cardWeb: {
-    backgroundColor: colors.cardMuted,
+    backgroundColor: colors.card,
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255,255,255,0.7)',
+    // Make the "glass" overlay fully opaque so padding/background matches the content.
+    backgroundColor: colors.card,
   },
   inner: {
     padding: 20,

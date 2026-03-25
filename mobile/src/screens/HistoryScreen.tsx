@@ -18,6 +18,7 @@ import Toast from 'react-native-toast-message';
 import { getScans, clearHistory, type ScanHistoryEntry } from '../services/history';
 import { clearAllStoredData } from '../services/api';
 import { IconLeaf } from '../components/Icons';
+import { navigateRoot } from '../navigation/navigationRef';
 
 function formatLabel(s: string): string {
   return s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
@@ -90,7 +91,11 @@ export function HistoryScreen() {
   }, [runClear]);
 
   const renderItem = ({ item }: { item: ScanHistoryEntry }) => (
-    <View style={styles.row}>
+    <TouchableOpacity
+      style={styles.row}
+      activeOpacity={0.85}
+      onPress={() => navigateRoot('HistoryDetail', { scanId: item.id })}
+    >
       {item.imageUri ? (
         <Image source={{ uri: item.imageUri }} style={styles.thumb} resizeMode="cover" />
       ) : (
@@ -105,7 +110,7 @@ export function HistoryScreen() {
         </Text>
       </View>
       <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-    </View>
+    </TouchableOpacity>
   );
 
   return (

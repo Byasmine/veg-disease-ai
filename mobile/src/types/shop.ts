@@ -34,6 +34,7 @@ export interface ShopCart {
 export interface ShopOrderItem {
   productId: string;
   productName: string;
+  imageUrl?: string;
   quantity: number;
   unitPrice: number;
   lineTotal: number;
