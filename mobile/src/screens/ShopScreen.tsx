@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -8,18 +8,26 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { colors } from '../theme/colors';
 import { GlassCard } from '../components/GlassCard';
-import { GradientButton } from '../components/GradientButton';
+import { ShopProductCard } from '../components/shop/ShopProductCard';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import type { ShopCategory, ShopProduct } from '../types/shop';
 import { addShopCartItem, getShopCategories, getShopProducts } from '../services/shopApi';
+import { useAuth } from '../context/AuthContext';
+import { goToAuth } from '../navigation/navigationRef';
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Shop'> };
 
+function categoryNameForId(categories: ShopCategory[], id: string): string {
+  return categories.find((c) => c.id === id)?.name ?? 'Shop';
+}
+
 export function ShopScreen({ navigation }: Props) {
+  const { user } = useAuth();
   const [categories, setCategories] = useState<ShopCategory[]>([]);
   const [products, setProducts] = useState<ShopProduct[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [loading, setLoading] = useState(false);
+  const [addingId, setAddingId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -44,11 +52,19 @@ export function ShopScreen({ navigation }: Props) {
   }, [products, selectedCategory]);
 
   const addToCart = async (productId: string) => {
+    if (!user) {
+      Toast.show({ type: 'info', text1: 'Sign in required', text2: 'Sign in to add items to your cart.' });
+      goToAuth(navigation);
+      return;
+    }
+    setAddingId(productId);
     try {
       await addShopCartItem(productId, 1);
       Toast.show({ type: 'success', text1: 'Added to cart' });
     } catch (e) {
       Toast.show({ type: 'error', text1: 'Could not add item', text2: (e as Error)?.message });
+    } finally {
+      setAddingId(null);
     }
   };
 
@@ -95,26 +111,23 @@ export function ShopScreen({ navigation }: Props) {
 
       <Animated.View entering={FadeInDown.delay(120).duration(250)}>
         {visibleProducts.map((product) => (
-          <GlassCard key={product.id} style={styles.productCard}>
-            <View style={styles.productRow}>
-              {product.imageUrl ? (
-                <Image source={{ uri: product.imageUrl }} style={styles.productImage} resizeMode="cover" />
-              ) : (
-                <View style={[styles.productImage, styles.productImageFallback]}>
-                  <Ionicons name="leaf-outline" size={20} color={colors.taupe} />
-                </View>
-              )}
-              <View style={styles.productBody}>
-                <Text style={styles.productName}>{product.name}</Text>
-                <Text style={styles.productDesc}>{product.description ?? 'No description'}</Text>
-                <View style={styles.metaRow}>
-                  <Text style={styles.price}>${product.price.toFixed(2)}</Text>
-                  <Text style={styles.stock}>Stock: {product.stock}</Text>
-                </View>
-              </View>
-            </View>
-            <GradientButton title="Add to cart" onPress={() => addToCart(product.id)} />
-          </GlassCard>
+          <ShopProductCard
+            key={product.id}
+            product={product}
+            categoryLabel={categoryNameForId(categories, product.categoryId)}
+            onProductPress={() =>
+              navigation.navigate(
+                'MainTabs',
+                {
+                  screen: 'Shop',
+                  params: { screen: 'ProductDetails', params: { product } },
+                } as never
+              )
+            }
+            onAddToCart={() => addToCart(product.id)}
+            loading={addingId === product.id}
+            style={styles.productCard}
+          />
         ))}
       </Animated.View>
 
@@ -159,14 +172,5 @@ const styles = StyleSheet.create({
   chipText: { color: colors.textPrimary, fontWeight: '600' },
   chipTextActive: { color: colors.textOnOlive },
   productCard: { marginBottom: 14 },
-  productRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
-  productImage: { width: 76, height: 76, borderRadius: 10, backgroundColor: colors.cream },
-  productImageFallback: { alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border },
-  productBody: { flex: 1 },
-  productName: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
-  productDesc: { marginTop: 4, fontSize: 13, color: colors.textSecondary },
-  metaRow: { marginTop: 8, flexDirection: 'row', justifyContent: 'space-between' },
-  price: { fontSize: 16, fontWeight: '700', color: colors.olive },
-  stock: { fontSize: 13, color: colors.textSecondary },
   empty: { textAlign: 'center', color: colors.textSecondary, marginTop: 20 },
 });

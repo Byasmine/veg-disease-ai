@@ -1,15 +1,16 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
 
 import { colors } from '../../theme/colors';
-import { GlassCard } from '../../components/GlassCard';
-import { GradientButton } from '../../components/GradientButton';
+import { ShopProductCard } from '../../components/shop/ShopProductCard';
 import { addShopCartItem, getShopProducts } from '../../services/shopApi';
 import type { ShopProduct } from '../../types/shop';
 import type { ShopStackParamList } from '../../navigation/MainTabNavigator';
+import { useAuth } from '../../context/AuthContext';
+import { goToAuth } from '../../navigation/navigationRef';
 
 type Props = {
   navigation: NativeStackNavigationProp<ShopStackParamList, 'ProductList'>;
@@ -17,9 +18,11 @@ type Props = {
 };
 
 export function ProductListScreen({ navigation, route }: Props) {
+  const { user } = useAuth();
   const [products, setProducts] = useState<ShopProduct[]>([]);
+  const [addingId, setAddingId] = useState<string | null>(null);
   const categoryId = route.params?.categoryId;
-  const categoryName = route.params?.categoryName;
+  const categoryName = route.params?.categoryName ?? 'All products';
 
   const load = useCallback(async () => {
     try {
@@ -35,32 +38,42 @@ export function ProductListScreen({ navigation, route }: Props) {
   }, [load]);
 
   const addToCart = async (productId: string) => {
+    if (!user) {
+      Toast.show({ type: 'info', text1: 'Sign in required', text2: 'Sign in to add items to your cart.' });
+      goToAuth(navigation);
+      return;
+    }
+    setAddingId(productId);
     try {
       await addShopCartItem(productId, 1);
       Toast.show({ type: 'success', text1: 'Added to cart' });
     } catch (e) {
       Toast.show({ type: 'error', text1: 'Could not add item', text2: (e as Error)?.message });
+    } finally {
+      setAddingId(null);
     }
   };
 
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-      {categoryName ? <Text style={styles.categoryTitle}>{categoryName}</Text> : null}
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <Text style={styles.categoryTitle}>{categoryName}</Text>
+      <Text style={styles.categorySub}>{products.length} {products.length === 1 ? 'item' : 'items'}</Text>
       {products.map((product) => (
-        <GlassCard key={product.id} style={styles.card}>
-          <TouchableOpacity onPress={() => navigation.navigate('ProductDetails', { product })}>
-            <View style={styles.row}>
-              {product.imageUrl ? <Image source={{ uri: product.imageUrl }} style={styles.img} /> : <View style={styles.img} />}
-              <View style={styles.body}>
-                <Text style={styles.name}>{product.name}</Text>
-                <Text style={styles.desc} numberOfLines={2}>{product.description ?? 'No description'}</Text>
-                <Text style={styles.price}>${product.price.toFixed(2)}</Text>
-              </View>
-            </View>
-          </TouchableOpacity>
-          <GradientButton title="Add to cart" onPress={() => addToCart(product.id)} />
-        </GlassCard>
+        <ShopProductCard
+          key={product.id}
+          product={product}
+          categoryLabel={categoryName}
+          onProductPress={() => navigation.navigate('ProductDetails', { product })}
+          onAddToCart={() => addToCart(product.id)}
+          loading={addingId === product.id}
+          style={styles.cardSpacing}
+        />
       ))}
+      {products.length === 0 ? (
+        <View style={styles.empty}>
+          <Text style={styles.emptyText}>No products in this list yet.</Text>
+        </View>
+      ) : null}
     </ScrollView>
   );
 }
@@ -68,12 +81,9 @@ export function ProductListScreen({ navigation, route }: Props) {
 const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: colors.cream },
   content: { padding: 20, paddingBottom: 40 },
-  categoryTitle: { marginBottom: 10, fontSize: 22, fontWeight: '700', color: colors.textPrimary },
-  card: { marginBottom: 12 },
-  row: { flexDirection: 'row', gap: 12, marginBottom: 12 },
-  img: { width: 72, height: 72, borderRadius: 10, backgroundColor: colors.cardMuted },
-  body: { flex: 1 },
-  name: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
-  desc: { marginTop: 4, color: colors.textSecondary },
-  price: { marginTop: 8, color: colors.olive, fontWeight: '700', fontSize: 16 },
+  categoryTitle: { fontSize: 24, fontWeight: '800', color: colors.textPrimary, letterSpacing: -0.3 },
+  categorySub: { marginTop: 4, marginBottom: 16, fontSize: 14, fontWeight: '600', color: colors.textSecondary },
+  cardSpacing: { marginBottom: 12 },
+  empty: { paddingVertical: 32, alignItems: 'center' },
+  emptyText: { color: colors.textSecondary, fontSize: 15 },
 });

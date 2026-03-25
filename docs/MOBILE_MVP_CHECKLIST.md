@@ -120,3 +120,22 @@ npx expo start
 - [ ] (Optional) Groq/OpenAI configured so `/predict-with-reasoning` returns `llm_reasoning`.
 
 Once all of the above are done, you’re ready to create the Expo app and implement the MVP screens and API calls.
+
+---
+
+## 6. Shop + auth backend (this repo) — smoke checklist
+
+The **Leaf Doctor** app also uses **`shop-backend/`** (Express + JWT + PostgreSQL) for the store, accounts, and orders. Use this after the AI backend checks above.
+
+| Check | What to verify |
+|-------|----------------|
+| Postgres + API | `docker compose up -d` in `shop-backend/`, `npm run dev` → `GET http://localhost:8082/api/shop/health` → `{ "status": "ok", ... }` |
+| Catalog (DB) | `GET /api/shop/categories` and `GET /api/shop/products` return data (seeded on migrate) |
+| Guest shop | Mobile app can open **Shop** tabs **without** signing in; categories/products load |
+| Register + OTP | `POST /api/auth/register` with profile fields → OTP emailed (or printed in server console if SMTP unset) → `POST /api/auth/verify-signup` → user can log in |
+| Login gate | **Analyze** tab and **add to cart / checkout / orders** prompt for sign-in when logged out |
+| Cart → order | Sign in, add item, checkout with **shipping** fields → `GET /api/shop/orders` shows the order |
+| Avatar | `POST /api/user/avatar` with multipart field **`photo`** works; on a **physical device**, set shop `PUBLIC_BASE_URL` to a URL the phone can open (LAN IP or deployed HTTPS), not only `localhost` |
+| SMTP (production) | Port **587** → `SMTP_SECURE=false` (STARTTLS). Port **465** → `SMTP_SECURE=true`. Wrong combo causes OpenSSL `wrong version number` |
+
+**Mobile env:** `EXPO_PUBLIC_SHOP_API_URL` (see `mobile/.env` / `mobile/README.md`).

@@ -1,29 +1,46 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import Toast from 'react-native-toast-message';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/GradientButton';
 import { GlassCard } from '../components/GlassCard';
 import { colors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
+import type { RootStackParamList } from '../navigation/RootNavigator';
 
-function getFirebaseMessage(error: unknown): string {
-  const raw = error instanceof Error ? error.message : 'Authentication failed';
-  if (raw.includes('auth/invalid-credential')) return 'Invalid email or password.';
-  if (raw.includes('auth/email-already-in-use')) return 'This email is already registered.';
-  if (raw.includes('auth/invalid-email')) return 'Please enter a valid email address.';
-  if (raw.includes('auth/weak-password')) return 'Password should be at least 6 characters.';
-  if (raw.includes('auth/api-key-not-valid')) return 'Firebase API key is invalid. Check your .env.';
-  return raw;
+type Nav = NativeStackNavigationProp<RootStackParamList>;
+
+function authErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) return error.message;
+  return 'Authentication failed';
 }
 
 export function AuthScreen() {
-  const { signIn, signUp } = useAuth();
+  const navigation = useNavigation<Nav>();
+  const { signIn, startRegistration } = useAuth();
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [addressLine1, setAddressLine1] = useState('');
+  const [addressLine2, setAddressLine2] = useState('');
+  const [city, setCity] = useState('');
+  const [postalCode, setPostalCode] = useState('');
+  const [country, setCountry] = useState('US');
   const [loading, setLoading] = useState(false);
 
   const onSubmit = async () => {
@@ -31,80 +48,173 @@ export function AuthScreen() {
       Toast.show({ type: 'error', text1: 'Missing info', text2: 'Please enter email and password.' });
       return;
     }
+    if (mode === 'signup') {
+      if (!fullName.trim() || !phone.trim() || !addressLine1.trim() || !city.trim() || !postalCode.trim()) {
+        Toast.show({
+          type: 'error',
+          text1: 'Complete the form',
+          text2: 'Name, phone, and full address are required for delivery.',
+        });
+        return;
+      }
+    }
     setLoading(true);
     try {
-      if (mode === 'signin') await signIn(email, password);
-      else await signUp(email, password);
-      Toast.show({
-        type: 'success',
-        text1: mode === 'signin' ? 'Signed in' : 'Account created',
-      });
+      if (mode === 'signin') {
+        await signIn(email, password);
+        Toast.show({ type: 'success', text1: 'Signed in' });
+        if (navigation.canGoBack()) navigation.goBack();
+        else navigation.navigate('MainTabs');
+      } else {
+        const { email: regEmail, message } = await startRegistration({
+          email,
+          password,
+          fullName,
+          phone,
+          addressLine1,
+          addressLine2,
+          city,
+          postalCode,
+          country,
+        });
+        Toast.show({ type: 'success', text1: 'Check your email', text2: message });
+        navigation.navigate('VerifySignup', { email: regEmail });
+      }
     } catch (error) {
-      Toast.show({ type: 'error', text1: 'Auth error', text2: getFirebaseMessage(error) });
+      Toast.show({ type: 'error', text1: 'Auth error', text2: authErrorMessage(error) });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
-      <StatusBar style="dark" />
-      <Animated.View entering={FadeInDown.duration(300)} style={styles.inner}>
-        <GlassCard style={styles.card}>
-          <View style={styles.header}>
-            <View style={styles.iconWrap}>
-              <Ionicons name="leaf-outline" size={28} color={colors.olive} />
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      style={styles.container}
+    >
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+        <StatusBar style="dark" />
+        <Animated.View entering={FadeInDown.duration(300)} style={styles.inner}>
+          <GlassCard style={styles.card}>
+            <View style={styles.header}>
+              <View style={styles.iconWrap}>
+                <Ionicons name="leaf-outline" size={28} color={colors.olive} />
+              </View>
+              <Text style={styles.title}>Leaf Doctor</Text>
+              <Text style={styles.subtitle}>
+                {mode === 'signin' ? 'Sign in to analyze and order' : 'Create your account'}
+              </Text>
             </View>
-            <Text style={styles.title}>Leaf Doctor</Text>
-            <Text style={styles.subtitle}>Sign in to use your real account</Text>
-          </View>
 
-          <View style={styles.switchRow}>
-            <TouchableOpacity
-              onPress={() => setMode('signin')}
-              style={[styles.switchBtn, mode === 'signin' && styles.switchBtnActive]}
-            >
-              <Text style={[styles.switchText, mode === 'signin' && styles.switchTextActive]}>Sign in</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setMode('signup')}
-              style={[styles.switchBtn, mode === 'signup' && styles.switchBtnActive]}
-            >
-              <Text style={[styles.switchText, mode === 'signup' && styles.switchTextActive]}>Sign up</Text>
-            </TouchableOpacity>
-          </View>
+            <View style={styles.switchRow}>
+              <TouchableOpacity
+                onPress={() => setMode('signin')}
+                style={[styles.switchBtn, mode === 'signin' && styles.switchBtnActive]}
+              >
+                <Text style={[styles.switchText, mode === 'signin' && styles.switchTextActive]}>Sign in</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setMode('signup')}
+                style={[styles.switchBtn, mode === 'signup' && styles.switchBtnActive]}
+              >
+                <Text style={[styles.switchText, mode === 'signup' && styles.switchTextActive]}>Sign up</Text>
+              </TouchableOpacity>
+            </View>
 
-          <TextInput
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            placeholder="Email"
-            placeholderTextColor={colors.textSecondary}
-            style={styles.input}
-          />
-          <TextInput
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            placeholder="Password"
-            placeholderTextColor={colors.textSecondary}
-            style={styles.input}
-          />
+            <TextInput
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              placeholder="Email"
+              placeholderTextColor={colors.textSecondary}
+              style={styles.input}
+            />
+            <TextInput
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              placeholder="Password (min 6 characters)"
+              placeholderTextColor={colors.textSecondary}
+              style={styles.input}
+            />
 
-          <GradientButton
-            title={mode === 'signin' ? 'Sign in' : 'Create account'}
-            onPress={onSubmit}
-            loading={loading}
-          />
-        </GlassCard>
-      </Animated.View>
+            {mode === 'signup' ? (
+              <>
+                <TextInput
+                  value={fullName}
+                  onChangeText={setFullName}
+                  placeholder="Full name"
+                  placeholderTextColor={colors.textSecondary}
+                  style={styles.input}
+                />
+                <TextInput
+                  value={phone}
+                  onChangeText={setPhone}
+                  keyboardType="phone-pad"
+                  placeholder="Phone"
+                  placeholderTextColor={colors.textSecondary}
+                  style={styles.input}
+                />
+                <TextInput
+                  value={addressLine1}
+                  onChangeText={setAddressLine1}
+                  placeholder="Address line 1"
+                  placeholderTextColor={colors.textSecondary}
+                  style={styles.input}
+                />
+                <TextInput
+                  value={addressLine2}
+                  onChangeText={setAddressLine2}
+                  placeholder="Address line 2 (optional)"
+                  placeholderTextColor={colors.textSecondary}
+                  style={styles.input}
+                />
+                <TextInput
+                  value={city}
+                  onChangeText={setCity}
+                  placeholder="City"
+                  placeholderTextColor={colors.textSecondary}
+                  style={styles.input}
+                />
+                <TextInput
+                  value={postalCode}
+                  onChangeText={setPostalCode}
+                  placeholder="Postal code"
+                  placeholderTextColor={colors.textSecondary}
+                  style={styles.input}
+                />
+                <TextInput
+                  value={country}
+                  onChangeText={setCountry}
+                  placeholder="Country code (e.g. US)"
+                  placeholderTextColor={colors.textSecondary}
+                  style={styles.input}
+                />
+              </>
+            ) : null}
+
+            {mode === 'signin' ? (
+              <TouchableOpacity style={styles.linkRow} onPress={() => navigation.navigate('ForgotPassword')}>
+                <Text style={styles.link}>Forgot password?</Text>
+              </TouchableOpacity>
+            ) : null}
+
+            <GradientButton
+              title={mode === 'signin' ? 'Sign in' : 'Continue — verify email'}
+              onPress={onSubmit}
+              loading={loading}
+            />
+          </GlassCard>
+        </Animated.View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.cream, justifyContent: 'center', padding: 20 },
+  container: { flex: 1, backgroundColor: colors.cream },
+  scrollContent: { flexGrow: 1, justifyContent: 'center', padding: 20, paddingVertical: 32 },
   inner: { width: '100%' },
   card: { paddingTop: 24 },
   header: { alignItems: 'center', marginBottom: 18 },
@@ -118,7 +228,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   title: { fontSize: 28, fontWeight: '800', color: colors.textPrimary },
-  subtitle: { marginTop: 4, color: colors.textSecondary },
+  subtitle: { marginTop: 4, color: colors.textSecondary, textAlign: 'center', paddingHorizontal: 8 },
   switchRow: { flexDirection: 'row', gap: 8, marginBottom: 14 },
   switchBtn: {
     flex: 1,
@@ -142,4 +252,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     marginBottom: 10,
   },
+  linkRow: { marginBottom: 12, alignItems: 'flex-end' },
+  link: { color: colors.olive, fontWeight: '600', fontSize: 14 },
 });

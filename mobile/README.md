@@ -4,31 +4,50 @@ React Native + Expo MVP: capture or pick a leaf image, get prediction and treatm
 
 ## Run
 
-1. **Start the backend** (from project root):
+1. **AI backend** (Python, from repo `backend/`):
    ```bash
-   cd ..   # if you're in mobile/
    uvicorn app.main:app --reload
    ```
+   Default: `http://localhost:8000`.
 
-2. **Start the app**:
+2. **Shop + auth backend** (Node, JWT + PostgreSQL, from repo `shop-backend/`):
    ```bash
-   npm run web      # Browser (Windows-friendly; needs: npx expo install react-dom react-native-web)
+   docker compose up -d   # Postgres
+   cp .env.example .env   # set JWT_SECRET, DATABASE_URL
+   npm run dev
+   ```
+   Default: `http://localhost:8082`. The app uses this API for **shop + auth**. You can **browse the shop without signing in**; sign-in is required for **cart, checkout, orders**, and the **Analyze** tab (per app gates). Bearer token is sent on those requests.
+
+3. **Start the app**:
+   ```bash
+   npm run web      # Browser
    npm run android  # Android emulator
-   npm start        # Then scan QR with Expo Go on your iPhone
+   npm start        # Expo Go on device
    ```
 
-   **Expo Go on iPhone:** If you see "Project is incompatible with this version of Expo Go", update **Expo Go** to the latest version from the App Store. This project uses Expo SDK 55.
+   **Expo Go:** Use a current Expo Go build matching SDK 55.
 
-## API URL
+## Environment URLs
 
-Edit **`config.js`** and set `API_BASE_URL`:
+Create **`mobile/.env`** (loaded via `app.config.js`). Restart with `npx expo start -c` after changes.
 
-- **Web (same PC):** `http://localhost:8000`
-- **Android emulator:** `http://10.0.2.2:8000`
-- **Real iPhone (same Wi‑Fi):** `http://YOUR_PC_IP:8000` (e.g. from `ipconfig`)
+| Variable | Purpose |
+|----------|---------|
+| `EXPO_PUBLIC_API_URL` | AI backend (predict, etc.) |
+| `EXPO_PUBLIC_SHOP_API_URL` | Shop backend + JWT auth (`/api/auth`, `/api/shop`) |
+
+- **Web (same PC):** `http://localhost:8000` and `http://localhost:8082`
+- **Android emulator:** AI `http://10.0.2.2:8000`, shop `http://10.0.2.2:8082`
+- **Physical device (same Wi‑Fi):** use your PC’s LAN IP for both ports
+
+Auth is **email + password** with **email OTP** to activate new accounts; **forgot password** uses email OTP. No Firebase.
+
+Set shop **`PUBLIC_BASE_URL`** to a URL clients can reach (e.g. your PC’s LAN IP or deployed API) so **profile avatars** (`/uploads/avatars/...`) load on devices—not only `http://localhost:8082`.
 
 ## Flow
 
-1. **Take photo** or **Pick from gallery**
-2. Image is sent to `POST /predict-with-reasoning`
-3. Result screen shows: status, prediction, confidence, summary, treatment, next step, and AI reasoning (if Groq/OpenAI is configured).
+1. **Shop / home hub** — open categories and products as a guest.
+2. **Sign in** when you want **Analyze**, **cart**, **checkout**, or **orders** (JWT from `shop-backend`).
+3. **Register** → enter OTP from email (or dev server console if SMTP is off) → then sign in.
+4. **Take photo** or **pick from gallery** (Analyze) → `POST /predict-with-reasoning` on the AI backend.
+5. Result screen shows diagnosis, treatment, and optional PDF export.

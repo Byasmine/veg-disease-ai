@@ -122,6 +122,13 @@ export function OrdersScreen() {
                   <Ionicons name="card-outline" size={15} color={colors.textSecondary} />
                   <Text style={styles.meta}>{paymentLabel(order.paymentMethod)}</Text>
                 </View>
+                {order.shipping?.line1 ? (
+                  <Text style={styles.shipTo} numberOfLines={3}>
+                    Ship to: {order.shipping.name ?? '—'} · {order.shipping.line1}
+                    {order.shipping.city ? `, ${order.shipping.city}` : ''}{' '}
+                    {order.shipping.postalCode ?? ''}
+                  </Text>
+                ) : null}
               </GlassCard>
             </Animated.View>
           ))
@@ -184,6 +191,7 @@ const styles = StyleSheet.create({
   metaRow: { marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' },
   meta: { color: colors.textSecondary },
   metaSeparator: { marginHorizontal: 3, color: colors.textSecondary },
+  shipTo: { marginTop: 8, fontSize: 13, color: colors.textSecondary, lineHeight: 18 },
   emptyWrap: { alignItems: 'center', gap: 10 },
   empty: { color: colors.textSecondary, textAlign: 'center' },
 });

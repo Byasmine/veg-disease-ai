@@ -21,9 +21,9 @@ import { GradientButton } from '../components/GradientButton';
 import { AnimatedLoader } from '../components/AnimatedLoader';
 import { IconLeaf, IconCamera, IconImages, IconScan, IconAlert } from '../components/Icons';
 import Toast from 'react-native-toast-message';
-import type { RootStackParamList } from '../navigation/RootNavigator';
+import type { AnalyzeStackParamList } from '../navigation/analyzeStackTypes';
 
-type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Home'> };
+type Props = { navigation: NativeStackNavigationProp<AnalyzeStackParamList, 'Home'> };
 
 const LOADING_MESSAGES = [
   '🌿 Scanning leaf…',
@@ -72,7 +72,7 @@ export function HomeScreen({ navigation }: Props) {
           aspect: [1, 1],
         });
 
-    if (result.canceled || !result.assets[0]) return result.assets[0]?.uri ?? null;
+    if (result.canceled || !result.assets?.[0]) return result.assets?.[0]?.uri ?? null;
 
     const uri = result.assets[0].uri;
     const manipulated = await ImageManipulator.manipulateAsync(

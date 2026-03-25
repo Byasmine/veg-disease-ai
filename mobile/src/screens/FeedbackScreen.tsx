@@ -9,11 +9,11 @@ import { sendFeedback, sendFeedbackWithImage } from '../services/api';
 import { GradientButton } from '../components/GradientButton';
 import { LabelSelect } from '../components/LabelSelect';
 import { IconHeart, IconLeaf, IconChat, IconSend, IconBack } from '../components/Icons';
-import type { RootStackParamList } from '../navigation/RootNavigator';
+import type { AnalyzeStackParamList } from '../navigation/analyzeStackTypes';
 
 type Props = {
-  route: { params: RootStackParamList['Feedback'] };
-  navigation: NativeStackNavigationProp<RootStackParamList, 'Feedback'>;
+  route: { params: AnalyzeStackParamList['Feedback'] };
+  navigation: NativeStackNavigationProp<AnalyzeStackParamList, 'Feedback'>;
 };
 
 export function FeedbackScreen({ route, navigation }: Props) {

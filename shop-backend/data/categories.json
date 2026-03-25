@@ -1,6 +1,22 @@
 [
-  { "id": "cat-fertilizers", "name": "Fertilizers", "description": "NPK and micronutrient products" },
-  { "id": "cat-pesticides", "name": "Pesticides", "description": "Fungicides, insecticides, and control solutions" },
-  { "id": "cat-seeds", "name": "Seeds", "description": "Certified, disease-resistant seeds" },
-  { "id": "cat-tools", "name": "Tools", "description": "Sprayers, pruners, and field tools" }
+  {
+    "id": "cat-fertilizers",
+    "name": "Fertilizers & soil health",
+    "description": "Balanced NPK, organic amendments, and calcium for vigorous growth and fruit quality in vegetable beds and containers."
+  },
+  {
+    "id": "cat-pesticides",
+    "name": "Disease & pest control",
+    "description": "Fungicides, botanical oils, and biologicals chosen for small-scale vegetable gardens—always follow label rates and pre-harvest intervals."
+  },
+  {
+    "id": "cat-seeds",
+    "name": "Vegetable seeds",
+    "description": "Open-pollinated and hybrid varieties suited to home gardens; many selections emphasize vigor and common field resistances."
+  },
+  {
+    "id": "cat-tools",
+    "name": "Tools & safety",
+    "description": "Sprayers, cutting tools, metering, and gloves so applications are even, accurate, and comfortable."
+  }
 ]

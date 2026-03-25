@@ -1,42 +1,182 @@
 [
   {
-    "id": "prod-fungicide-copper",
-    "categoryId": "cat-pesticides",
-    "name": "Copper Fungicide",
-    "description": "Broad-spectrum fungicide for leaf spot and blight management.",
-    "price": 14.99,
-    "stock": 120,
+    "id": "prod-npk-20-20-20",
+    "categoryId": "cat-fertilizers",
+    "name": "ProGrow NPK 20-20-20 water-soluble (2 lb)",
+    "description": "All-purpose crystalline feed for vegetables and herbs. Mix per label for foliar or soil drench during establishment, flowering, and fruiting.",
+    "price": 24.99,
+    "stock": 140,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1589923158776-cb4485d99fd6"
+    "imageUrl": "https://images.pexels.com/photos/4503273/pexels-photo-4503273.jpeg?auto=compress&cs=tinysrgb&w=800"
   },
   {
-    "id": "prod-insecticide-neem",
-    "categoryId": "cat-pesticides",
-    "name": "Neem Oil Insecticide",
-    "description": "Natural pest control for whiteflies, aphids, and mites.",
-    "price": 11.5,
-    "stock": 75,
+    "id": "prod-kelp-fish-emulsion",
+    "categoryId": "cat-fertilizers",
+    "name": "Atlantic kelp & fish emulsion 32 fl oz",
+    "description": "Cold-processed liquid with trace minerals and gentle nitrogen for transplants, leafy crops, and recovery after stress.",
+    "price": 18.5,
+    "stock": 95,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1615485291234-9fbc8f0f1a36"
+    "imageUrl": "https://images.pexels.com/photos/4222745/pexels-photo-4222745.jpeg?auto=compress&cs=tinysrgb&w=800"
   },
   {
-    "id": "prod-seed-tomato-resistant",
+    "id": "prod-garden-gypsum",
+    "categoryId": "cat-fertilizers",
+    "name": "Garden gypsum (calcium sulfate) 25 lb",
+    "description": "Improves soil structure in heavy clay and supplies calcium without shifting pH—useful where blossom-end rot is a recurring issue.",
+    "price": 22.0,
+    "stock": 60,
+    "currency": "USD",
+    "imageUrl": "https://images.pexels.com/photos/365839/pexels-photo-365839.jpeg?auto=compress&cs=tinysrgb&w=800"
+  },
+  {
+    "id": "prod-compost-mycorrhizae",
+    "categoryId": "cat-fertilizers",
+    "name": "Compost + mycorrhizae inoculant blend (1 cu ft)",
+    "description": "Aged compost fortified with endo mycorrhizae to support root uptake. Incorporate at planting for tomatoes, peppers, and cucurbits.",
+    "price": 12.99,
+    "stock": 88,
+    "currency": "USD",
+    "imageUrl": "https://images.pexels.com/photos/2252581/pexels-photo-2252581.jpeg?auto=compress&cs=tinysrgb&w=800"
+  },
+  {
+    "id": "prod-copper-soap-rtu",
+    "categoryId": "cat-pesticides",
+    "name": "Copper soap fungicide, ready-to-use 24 fl oz",
+    "description": "Low-rate copper for early blight, Septoria, and bacterial spot on tomatoes and other solanums. Spray to runoff; avoid peak sun.",
+    "price": 16.75,
+    "stock": 110,
+    "currency": "USD",
+    "imageUrl": "https://images.pexels.com/photos/109479/pexels-photo-109479.jpeg?auto=compress&cs=tinysrgb&w=800"
+  },
+  {
+    "id": "prod-neem-concentrate",
+    "categoryId": "cat-pesticides",
+    "name": "Cold-pressed neem oil concentrate 16 fl oz",
+    "description": "70% clarified hydrophobic neem extract for aphids, whiteflies, and mites. Emulsify per label; test on a leaf before full application.",
+    "price": 21.25,
+    "stock": 72,
+    "currency": "USD",
+    "imageUrl": "https://images.pexels.com/photos/559166/pexels-photo-559166.jpeg?auto=compress&cs=tinysrgb&w=800"
+  },
+  {
+    "id": "prod-bt-thuricide",
+    "categoryId": "cat-pesticides",
+    "name": "Bt kurstaki liquid 8 fl oz",
+    "description": "Biological larvicide for caterpillars on brassicas, tomatoes, and corn. OMRI-listed formulation; reapply after heavy rain.",
+    "price": 14.5,
+    "stock": 130,
+    "currency": "USD",
+    "imageUrl": "https://images.pexels.com/photos/2889442/pexels-photo-2889442.jpeg?auto=compress&cs=tinysrgb&w=800"
+  },
+  {
+    "id": "prod-wettable-sulfur",
+    "categoryId": "cat-pesticides",
+    "name": "Wettable sulfur fungicide 1 lb",
+    "description": "For powdery mildew on cucurbits and some rusts. Do not combine with oils in the same season; check temperature limits on label.",
+    "price": 13.99,
+    "stock": 85,
+    "currency": "USD",
+    "imageUrl": "https://images.pexels.com/photos/1327838/pexels-photo-1327838.jpeg?auto=compress&cs=tinysrgb&w=800"
+  },
+  {
+    "id": "prod-seed-tomato-cherry",
     "categoryId": "cat-seeds",
-    "name": "Tomato Resistant Seed Pack",
-    "description": "Disease-resistant tomato hybrid seeds for improved yield.",
-    "price": 6.25,
+    "name": "Cherry tomato ‘Sun Sugar’ F1 (25 seeds)",
+    "description": "High-Brix yellow cherry with strong field tolerance to common tomato mosaic strains. Indeterminate; stake or trellis.",
+    "price": 5.49,
+    "stock": 220,
+    "currency": "USD",
+    "imageUrl": "https://images.pexels.com/photos/1084542/pexels-photo-1084542.jpeg?auto=compress&cs=tinysrgb&w=800"
+  },
+  {
+    "id": "prod-seed-pepper-carmen",
+    "categoryId": "cat-seeds",
+    "name": "Sweet Italian ‘Carmen’ pepper (30 seeds)",
+    "description": "Horn-shaped red sweets for grilling and salads. Open-pollinated; start indoors 8 weeks before last frost.",
+    "price": 4.25,
+    "stock": 180,
+    "currency": "USD",
+    "imageUrl": "https://images.pexels.com/photos/143133/pexels-photo-143133.jpeg?auto=compress&cs=tinysrgb&w=800"
+  },
+  {
+    "id": "prod-seed-lettuce-mix",
+    "categoryId": "cat-seeds",
+    "name": "Cut-and-come-again lettuce mix (500 seeds)",
+    "description": "Blend of oakleaf, romaine, and red looseleaf for continuous harvest. Sow every 2 weeks in cool weather.",
+    "price": 3.99,
+    "stock": 310,
+    "currency": "USD",
+    "imageUrl": "https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800"
+  },
+  {
+    "id": "prod-seed-bean-provider",
+    "categoryId": "cat-seeds",
+    "name": "‘Provider’ bush bean (2 oz)",
+    "description": "Early green pod bean with good cold soil emergence. Direct-sow after soil reaches 60°F (16°C).",
+    "price": 6.95,
+    "stock": 150,
+    "currency": "USD",
+    "imageUrl": "https://images.pexels.com/photos/169523/pexels-photo-169523.jpeg?auto=compress&cs=tinysrgb&w=800"
+  },
+  {
+    "id": "prod-seed-cucumber-marketmore",
+    "categoryId": "cat-seeds",
+    "name": "‘Marketmore 76’ slicing cucumber (40 seeds)",
+    "description": "Dependable slicer with resistance to several cucumber mosaic strains. Trellis for straight fruit.",
+    "price": 4.75,
     "stock": 200,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1598515213962-8fdf28ecbcf9"
+    "imageUrl": "https://images.pexels.com/photos/4505166/pexels-photo-4505166.jpeg?auto=compress&cs=tinysrgb&w=800"
   },
   {
-    "id": "prod-fertilizer-npk",
-    "categoryId": "cat-fertilizers",
-    "name": "NPK 20-20-20",
-    "description": "Balanced water-soluble fertilizer for vegetative and fruiting stages.",
-    "price": 18.0,
-    "stock": 90,
+    "id": "prod-seed-radish-french",
+    "categoryId": "cat-seeds",
+    "name": "‘French Breakfast’ radish (300 seeds)",
+    "description": "Mild, crisp roots in about 25 days—ideal between slower crops. Keep soil evenly moist for best texture.",
+    "price": 3.49,
+    "stock": 260,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1464226184884-fa280b87c399"
+    "imageUrl": "https://images.pexels.com/photos/2132250/pexels-photo-2132250.jpeg?auto=compress&cs=tinysrgb&w=800"
+  },
+  {
+    "id": "prod-sprayer-2l",
+    "categoryId": "cat-tools",
+    "name": "Vitron 2 L pump sprayer with brass wand",
+    "description": "Adjustable cone to fan pattern; Viton seals for oil-based products. Rinse thoroughly between products.",
+    "price": 32.99,
+    "stock": 45,
+    "currency": "USD",
+    "imageUrl": "https://images.pexels.com/photos/2518861/pexels-photo-2518861.jpeg?auto=compress&cs=tinysrgb&w=800"
+  },
+  {
+    "id": "prod-pruners-bypass",
+    "categoryId": "cat-tools",
+    "name": "Forged bypass pruners, 8 in",
+    "description": "SK5 steel blade, sap groove, and rubber bumpers for daily deadheading and sucker removal on tomatoes.",
+    "price": 36.5,
+    "stock": 55,
+    "currency": "USD",
+    "imageUrl": "https://images.pexels.com/photos/4473626/pexels-photo-4473626.jpeg?auto=compress&cs=tinysrgb&w=800"
+  },
+  {
+    "id": "prod-soil-meter",
+    "categoryId": "cat-tools",
+    "name": "3-in-1 analog soil meter (moisture / pH / light)",
+    "description": "Probe-style tester for containers and raised beds—use as a trend guide and calibrate pH with a lab test annually.",
+    "price": 19.99,
+    "stock": 70,
+    "currency": "USD",
+    "imageUrl": "https://images.pexels.com/photos/1300972/pexels-photo-1300972.jpeg?auto=compress&cs=tinysrgb&w=800"
+  },
+  {
+    "id": "prod-gloves-nitrile",
+    "categoryId": "cat-tools",
+    "name": "Nitrile-dipped grip gloves (3 pair, M/L)",
+    "description": "Breathable knit back with sandy nitrile palm for wet foliage, pruning, and rinsing harvest bins.",
+    "price": 14.25,
+    "stock": 120,
+    "currency": "USD",
+    "imageUrl": "https://images.pexels.com/photos/2132171/pexels-photo-2132171.jpeg?auto=compress&cs=tinysrgb&w=800"
   }
 ]

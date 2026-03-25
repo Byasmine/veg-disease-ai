@@ -88,7 +88,7 @@ router.delete('/cart', requireAuth, async (req, res, next) => {
 
 router.post('/checkout', requireAuth, async (req, res, next) => {
   try {
-    const order = await shop.checkout(req.user.id, req.body?.paymentMethod);
+    const order = await shop.checkout(req.user.id, req.body?.paymentMethod, req.body?.shipping || {});
     res.status(201).json(order);
   } catch (e) {
     next(e);

@@ -9,13 +9,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { GlassCard } from '../components/GlassCard';
 import { GradientButton } from '../components/GradientButton';
-import type { RootStackParamList } from '../navigation/RootNavigator';
 import type { ShopCart } from '../types/shop';
 import { clearShopCart, getShopCart, removeShopCartItem, updateShopCartItem } from '../services/shopApi';
+import { useAuth } from '../context/AuthContext';
+import { AuthRequiredPrompt } from '../components/AuthRequiredPrompt';
+import { goToAuth } from '../navigation/navigationRef';
 
-type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Cart'> };
+type Props = { navigation: NativeStackNavigationProp<Record<string, object | undefined>, 'Cart'> };
 
 export function CartScreen({ navigation }: Props) {
+  const { user } = useAuth();
   const [cart, setCart] = useState<ShopCart | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -32,8 +35,19 @@ export function CartScreen({ navigation }: Props) {
   }, []);
 
   useEffect(() => {
-    loadCart();
-  }, [loadCart]);
+    if (user) loadCart();
+    else setCart(null);
+  }, [user, loadCart]);
+
+  if (!user) {
+    return (
+      <AuthRequiredPrompt
+        title="Sign in to use the cart"
+        subtitle="Save items and checkout after you create an account."
+        onSignIn={() => goToAuth(navigation)}
+      />
+    );
+  }
 
   const updateQty = async (itemId: string, quantity: number) => {
     try {

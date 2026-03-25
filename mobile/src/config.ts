@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
 /**
@@ -11,49 +12,72 @@ function resolveUrl(value: unknown, fallback: string): string {
   return v.startsWith('http') ? v : `https://${v}`;
 }
 
-export const API_BASE_URL = resolveUrl(
+/** Metro / dev server host (LAN IP on a real device, often 10.0.2.2 on emulator). */
+function devPackagerHostname(): string | null {
+  const hostUri = Constants.expoConfig?.hostUri;
+  if (hostUri) {
+    const h = String(hostUri).split(':')[0]?.trim();
+    if (h) return h;
+  }
+  const legacy = Constants as {
+    expoGoConfig?: { debuggerHost?: string };
+    manifest?: { debuggerHost?: string; hostUri?: string };
+    manifest2?: { extra?: { expoClient?: { hostUri?: string; debuggerHost?: string } } };
+  };
+  const dbg =
+    legacy.expoGoConfig?.debuggerHost ??
+    legacy.manifest?.debuggerHost ??
+    legacy.manifest2?.extra?.expoClient?.debuggerHost;
+  if (dbg) {
+    const h = String(dbg).split(':')[0]?.trim();
+    if (h) return h;
+  }
+  const m2host = legacy.manifest2?.extra?.expoClient?.hostUri ?? legacy.manifest?.hostUri;
+  if (m2host) {
+    const h = String(m2host).split(':')[0]?.trim();
+    if (h) return h;
+  }
+  return null;
+}
+
+/**
+ * Android: replace loopback with a host the device can reach.
+ * - Emulator: usually `10.0.2.2` (or same as packager host).
+ * - Physical device: prefer Metro `hostUri` (your PC LAN IP) when in dev.
+ */
+function mapLocalhostForAndroid(url: string): string {
+  if (Platform.OS !== 'android') return url;
+  try {
+    const u = new URL(url);
+    if (u.hostname !== 'localhost' && u.hostname !== '127.0.0.1') return url;
+
+    let target = '10.0.2.2';
+    if (__DEV__) {
+      const packager = devPackagerHostname();
+      if (packager && packager !== '127.0.0.1' && packager !== 'localhost') {
+        target = packager;
+      }
+    }
+
+    u.hostname = target;
+    return u.href.replace(/\/$/, '');
+  } catch {
+    /* ignore */
+  }
+  return url;
+}
+
+const rawApi = resolveUrl(
   Constants.expoConfig?.extra?.apiUrl ?? (typeof process !== 'undefined' ? process.env?.EXPO_PUBLIC_API_URL : ''),
   'http://localhost:8000'
 );
 
-export const SHOP_API_BASE_URL = resolveUrl(
+const rawShop = resolveUrl(
   Constants.expoConfig?.extra?.shopApiUrl ??
     (typeof process !== 'undefined' ? process.env?.EXPO_PUBLIC_SHOP_API_URL : ''),
   'http://localhost:8082'
 );
 
-type FirebasePublicConfig = {
-  apiKey: string;
-  authDomain: string;
-  projectId: string;
-  storageBucket: string;
-  messagingSenderId: string;
-  appId: string;
-};
-
-export const FIREBASE_CONFIG: FirebasePublicConfig = {
-  apiKey:
-    Constants.expoConfig?.extra?.firebase?.apiKey ??
-    (typeof process !== 'undefined' ? process.env?.EXPO_PUBLIC_FIREBASE_API_KEY : '') ??
-    '',
-  authDomain:
-    Constants.expoConfig?.extra?.firebase?.authDomain ??
-    (typeof process !== 'undefined' ? process.env?.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN : '') ??
-    '',
-  projectId:
-    Constants.expoConfig?.extra?.firebase?.projectId ??
-    (typeof process !== 'undefined' ? process.env?.EXPO_PUBLIC_FIREBASE_PROJECT_ID : '') ??
-    '',
-  storageBucket:
-    Constants.expoConfig?.extra?.firebase?.storageBucket ??
-    (typeof process !== 'undefined' ? process.env?.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET : '') ??
-    '',
-  messagingSenderId:
-    Constants.expoConfig?.extra?.firebase?.messagingSenderId ??
-    (typeof process !== 'undefined' ? process.env?.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID : '') ??
-    '',
-  appId:
-    Constants.expoConfig?.extra?.firebase?.appId ??
-    (typeof process !== 'undefined' ? process.env?.EXPO_PUBLIC_FIREBASE_APP_ID : '') ??
-    '',
-};
+export const API_BASE_URL = mapLocalhostForAndroid(rawApi);
+/** Shop + JWT auth API (same host as shop-backend). */
+export const SHOP_API_BASE_URL = mapLocalhostForAndroid(rawShop);

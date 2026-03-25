@@ -5,6 +5,10 @@
 export const colors = {
   olive: '#777E49',
   cream: '#E7DCC9',
+  /** Slightly deeper cream for section strips (e.g. shop header) — still in the same family as `cream`. */
+  creamMuted: '#DCD2C2',
+  /** Very light sage; pairs with cream + olive without competing. */
+  sageSurface: '#E4EBE2',
   taupe: '#8C7C63',
   background: '#E7DCC9',
   card: '#FFFFFF',

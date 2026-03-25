@@ -1,51 +1,99 @@
 # Shop Backend (Express.js)
 
-Separate e-commerce backend for the agriculture shop. This is independent from the AI backend in `backend/`.
+E-commerce and **JWT auth** for the Leaf Doctor app, backed by **PostgreSQL**. Fits Railway: add Postgres, set `DATABASE_URL`, deploy the included **Dockerfile**.
 
-## Features
-
-- Categories and products catalog
-- Cart management per user
-- Simulated checkout and order history
-- Simple auth placeholder via `x-user-id` header (easy local testing)
+Catalog, cart, and orders are stored in the database (migrations seed categories/products from `data/*.json`).
 
 ## Run locally
 
-```bash
-cd shop-backend
-npm install
-npm run dev
-```
+1. Start Postgres (Docker):
 
-Server starts on `http://localhost:8082`.
+   ```bash
+   cd shop-backend
+   docker compose up -d
+   ```
+
+2. Configure env:
+
+   ```bash
+   cp .env.example .env
+   # JWT_SECRET (≥16 random chars). DATABASE_URL matches compose by default.
+   ```
+
+3. Install and run:
+
+   ```bash
+   npm install
+   npm run dev
+   ```
+
+Server: `http://localhost:8082` (migrations run on startup).
+
+**Refreshing the product catalog** after `data/*.json` changes: new rows upsert by id, but **removed ids stay in the database**. For a clean re-seed in development, set **`CATALOG_RESET=true`** once in `.env`, restart the server, then remove it (this deletes all `cart_items` and replaces `categories` / `products` from JSON).
+
+### Useful env vars
+
+| Variable | Purpose |
+|----------|---------|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `JWT_SECRET` | Required; signs access tokens |
+| `PUBLIC_BASE_URL` | Public URL of this API (avatar links). Use LAN IP or HTTPS in production so clients can load `/uploads/...` |
+| `SMTP_*`, `EMAIL_FROM` | Optional; OTP emails. Without SMTP, OTPs are logged to the console (dev) |
+| `DATABASE_SSL` | Set `false` for local Postgres; hosted DBs often need TLS (see `.env.example`) |
+
+**SMTP:** Port **587** uses STARTTLS → `SMTP_SECURE=false`. Port **465** uses implicit TLS → `SMTP_SECURE=true`. Mixing **587 + `SMTP_SECURE=true`** causes TLS errors.
+
+## Railway (Docker)
+
+- Add **PostgreSQL**; set **`DATABASE_URL`** and **`JWT_SECRET`** on the shop service.
+- Set **`PUBLIC_BASE_URL`** to your deployed service URL (for avatar URLs).
+- Deploy with **`Dockerfile`** in `shop-backend/`.
+- If TLS to Postgres fails, try `DATABASE_SSL_REJECT_UNAUTHORIZED=false` (see `.env.example`).
 
 ## API
 
-Base: `http://localhost:8082/api/shop`
+Base: `http://localhost:8082` (or your host).
 
-- `GET /health`
-- `GET /categories`
-- `GET /products?categoryId=&q=`
-- `GET /products/:id`
+### Auth — `/api/auth`
 
-Authenticated (send header `x-user-id: user_123`):
+| Method | Path | Notes |
+|--------|------|--------|
+| POST | `/register` | Start signup (profile + address); sends email OTP |
+| POST | `/verify-signup` | `{ email, code }` → `{ user, token }` |
+| POST | `/resend-signup-otp` | `{ email }` |
+| POST | `/login` | `{ email, password }` (requires verified email) |
+| POST | `/forgot-password` | Sends reset OTP |
+| POST | `/reset-password` | `{ email, code, newPassword }` |
+| POST | `/change-password` | Bearer token; `{ currentPassword, newPassword }` |
+| GET | `/me` | Bearer token → current user |
 
-- `GET /cart`
-- `POST /cart/items` body `{ "productId": "...", "quantity": 1 }`
-- `PATCH /cart/items/:itemId` body `{ "quantity": 3 }`
-- `DELETE /cart/items/:itemId`
-- `DELETE /cart`
-- `POST /checkout` body `{ "paymentMethod": "simulated-card" }`
-- `GET /orders`
-- `GET /orders/:id`
+### User — `/api/user` (Bearer)
 
-## Data storage
+| Method | Path | Notes |
+|--------|------|--------|
+| GET | `/profile` | Current user |
+| PATCH | `/profile` | Update name, phone, address fields |
+| POST | `/avatar` | `multipart/form-data`, field **`photo`** (or `file`), max 2MB, image types only |
 
-Uses JSON files under `data/` for MVP:
+### Shop — `/api/shop`
 
-- `categories.json`
-- `products.json`
-- `carts.json`
-- `orders.json`
+**No auth:** `GET /health`, `GET /categories`, `GET /products`, `GET /products/:id`.
 
-You can swap this later for Postgres/Mongo without changing the route contract.
+**Bearer required:** cart, checkout, orders.
+
+| Method | Path | Body (examples) |
+|--------|------|-----------------|
+| GET | `/cart` | — |
+| POST | `/cart/items` | `{ productId, quantity }` |
+| PATCH | `/cart/items/:itemId` | `{ quantity }` |
+| DELETE | `/cart/items/:itemId` | — |
+| DELETE | `/cart` | — |
+| POST | `/checkout` | `{ paymentMethod, shipping?: { ... } }` |
+| GET | `/orders` | — |
+| GET | `/orders/:id` | — |
+
+Static files: **`GET /uploads/avatars/...`** (avatar uploads).
+
+## Mobile app
+
+Set **`EXPO_PUBLIC_SHOP_API_URL`** in `mobile/.env` to this API’s base URL. The app browses the shop as a guest; it sends **`Authorization: Bearer <token>`** for cart, checkout, orders, analyze-gated flows, and profile.

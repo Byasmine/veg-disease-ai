@@ -1,7 +1,8 @@
 import React from 'react';
 import { View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createNativeStackNavigator, type NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { HomeScreen } from '../screens/HomeScreen';
@@ -16,9 +17,12 @@ import { ProductListScreen } from '../screens/shop/ProductListScreen';
 import { ProductDetailsScreen } from '../screens/shop/ProductDetailsScreen';
 import { CartScreen } from '../screens/CartScreen';
 import { CheckoutScreen } from '../screens/CheckoutScreen';
-import { ProfileSettingsStarterScreen } from '../screens/tabs/ProfileSettingsStarterScreen';
+import { ProfileScreen } from '../screens/tabs/ProfileScreen';
+import { AuthRequiredPrompt } from '../components/AuthRequiredPrompt';
+import { useAuth } from '../context/AuthContext';
+import { goToAuth } from './navigationRef';
 import type { ShopProduct } from '../types/shop';
-import type { PredictionResponse } from '../types/api';
+import type { AnalyzeStackParamList } from './analyzeStackTypes';
 
 export type MainTabParamList = {
   Shop: undefined;
@@ -32,17 +36,7 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 const AnalyzeStack = createNativeStackNavigator<AnalyzeStackParamList>();
 const ShopStack = createNativeStackNavigator<ShopStackParamList>();
 
-type AnalyzeStackParamList = {
-  Home: undefined;
-  Result: { imageUri: string; result: PredictionResponse };
-  Feedback: {
-    predicted_label: string;
-    correct_label: string;
-    confidence: number;
-    imageUri?: string;
-  };
-  History: undefined;
-};
+export type { AnalyzeStackParamList } from './analyzeStackTypes';
 
 export type ShopStackParamList = {
   ShopHome: undefined;
@@ -52,6 +46,51 @@ export type ShopStackParamList = {
   Cart: undefined;
   Checkout: undefined;
 };
+
+function AnalyzeHomeGate(props: NativeStackScreenProps<AnalyzeStackParamList, 'Home'>) {
+  const { user } = useAuth();
+  const navigation = useNavigation();
+  if (!user) {
+    return (
+      <AuthRequiredPrompt
+        title="Sign in to analyze"
+        subtitle="Create a free account to scan leaves and get AI disease diagnosis."
+        onSignIn={() => goToAuth(navigation)}
+      />
+    );
+  }
+  return <HomeScreen {...props} />;
+}
+
+function AnalyzeHistoryGate(_props: NativeStackScreenProps<AnalyzeStackParamList, 'History'>) {
+  const { user } = useAuth();
+  const navigation = useNavigation();
+  if (!user) {
+    return (
+      <AuthRequiredPrompt
+        title="Sign in for history"
+        subtitle="Your past scans are saved when you are signed in."
+        onSignIn={() => goToAuth(navigation)}
+      />
+    );
+  }
+  return <HistoryScreen />;
+}
+
+function OrdersTabGate() {
+  const { user } = useAuth();
+  const navigation = useNavigation();
+  if (!user) {
+    return (
+      <AuthRequiredPrompt
+        title="Sign in for orders"
+        subtitle="View and track your shop orders after you sign in."
+        onSignIn={() => goToAuth(navigation)}
+      />
+    );
+  }
+  return <OrdersScreen />;
+}
 
 function AnalyzeStackNavigator() {
   return (
@@ -66,7 +105,7 @@ function AnalyzeStackNavigator() {
     >
       <AnalyzeStack.Screen
         name="Home"
-        component={HomeScreen}
+        component={AnalyzeHomeGate}
         options={({ navigation }) => ({
           title: 'Plant Health Scanner',
           headerRight: () => (
@@ -81,7 +120,7 @@ function AnalyzeStackNavigator() {
       />
       <AnalyzeStack.Screen name="Result" component={ResultScreen} options={{ title: 'Diagnosis' }} />
       <AnalyzeStack.Screen name="Feedback" component={FeedbackScreen} options={{ title: 'Improve the AI' }} />
-      <AnalyzeStack.Screen name="History" component={HistoryScreen} options={{ title: 'Scan history' }} />
+      <AnalyzeStack.Screen name="History" component={AnalyzeHistoryGate} options={{ title: 'Scan history' }} />
     </AnalyzeStack.Navigator>
   );
 }
@@ -97,7 +136,7 @@ function ShopStackNavigator() {
         contentStyle: { backgroundColor: colors.cream },
       }}
     >
-      <ShopStack.Screen name="ShopHome" component={ShopHomeScreen} options={{ title: 'Shop' }} />
+      <ShopStack.Screen name="ShopHome" component={ShopHomeScreen} options={{ headerShown: false }} />
       <ShopStack.Screen name="Categories" component={CategoriesScreen} options={{ title: 'Categories' }} />
       <ShopStack.Screen name="ProductList" component={ProductListScreen} options={{ title: 'Products' }} />
       <ShopStack.Screen name="ProductDetails" component={ProductDetailsScreen} options={{ title: 'Product Details' }} />
@@ -162,16 +201,8 @@ export function MainTabNavigator() {
       <Tab.Screen name="Shop" component={ShopStackNavigator} options={{ tabBarLabel: 'Shop' }} />
       <Tab.Screen name="Analyze" component={AnalyzeStackNavigator} options={{ tabBarLabel: 'Analyze' }} />
       <Tab.Screen name="HomeHub" component={HomeHubScreen} options={{ tabBarLabel: 'Home' }} />
-      <Tab.Screen
-        name="OrdersHistory"
-        component={OrdersScreen}
-        options={{ tabBarLabel: 'Orders' }}
-      />
-      <Tab.Screen
-        name="ProfileSettings"
-        component={ProfileSettingsStarterScreen}
-        options={{ tabBarLabel: 'Profile' }}
-      />
+      <Tab.Screen name="OrdersHistory" component={OrdersTabGate} options={{ tabBarLabel: 'Orders' }} />
+      <Tab.Screen name="ProfileSettings" component={ProfileScreen} options={{ tabBarLabel: 'Profile' }} />
     </Tab.Navigator>
   );
 }

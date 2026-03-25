@@ -1,8 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { SHOP_API_BASE_URL } from '../config';
 import type { ShopCart, ShopCategory, ShopOrder, ShopProduct } from '../types/shop';
-
-const DEMO_USER_ID = 'demo_user_mobile';
+import { getAccessToken } from './authSession';
 
 const shopClient: AxiosInstance = axios.create({
   baseURL: `${SHOP_API_BASE_URL}/api/shop`,
@@ -10,9 +9,13 @@ const shopClient: AxiosInstance = axios.create({
   headers: { Accept: 'application/json' },
 });
 
-function authHeader(userId: string = DEMO_USER_ID) {
-  return { 'x-user-id': userId };
-}
+shopClient.interceptors.request.use((config) => {
+  const token = getAccessToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
 export async function getShopCategories(): Promise<ShopCategory[]> {
   const { data } = await shopClient.get<ShopCategory[]>('/categories');
@@ -24,51 +27,50 @@ export async function getShopProducts(params?: { categoryId?: string; q?: string
   return Array.isArray(data) ? data : [];
 }
 
-export async function getShopCart(userId?: string): Promise<ShopCart> {
-  const { data } = await shopClient.get<ShopCart>('/cart', { headers: authHeader(userId) });
+export async function getShopCart(): Promise<ShopCart> {
+  const { data } = await shopClient.get<ShopCart>('/cart');
   return data;
 }
 
-export async function addShopCartItem(productId: string, quantity = 1, userId?: string): Promise<ShopCart> {
-  const { data } = await shopClient.post<ShopCart>(
-    '/cart/items',
-    { productId, quantity },
-    { headers: authHeader(userId) }
-  );
+export async function addShopCartItem(productId: string, quantity = 1): Promise<ShopCart> {
+  const { data } = await shopClient.post<ShopCart>('/cart/items', { productId, quantity });
   return data;
 }
 
-export async function updateShopCartItem(itemId: string, quantity: number, userId?: string): Promise<ShopCart> {
-  const { data } = await shopClient.patch<ShopCart>(
-    `/cart/items/${itemId}`,
-    { quantity },
-    { headers: authHeader(userId) }
-  );
+export async function updateShopCartItem(itemId: string, quantity: number): Promise<ShopCart> {
+  const { data } = await shopClient.patch<ShopCart>(`/cart/items/${itemId}`, { quantity });
   return data;
 }
 
-export async function removeShopCartItem(itemId: string, userId?: string): Promise<ShopCart> {
-  const { data } = await shopClient.delete<ShopCart>(`/cart/items/${itemId}`, {
-    headers: authHeader(userId),
-  });
+export async function removeShopCartItem(itemId: string): Promise<ShopCart> {
+  const { data } = await shopClient.delete<ShopCart>(`/cart/items/${itemId}`);
   return data;
 }
 
-export async function clearShopCart(userId?: string): Promise<ShopCart> {
-  const { data } = await shopClient.delete<ShopCart>('/cart', { headers: authHeader(userId) });
+export async function clearShopCart(): Promise<ShopCart> {
+  const { data } = await shopClient.delete<ShopCart>('/cart');
   return data;
 }
 
-export async function checkoutShop(paymentMethod = 'simulated-card', userId?: string): Promise<ShopOrder> {
-  const { data } = await shopClient.post<ShopOrder>(
-    '/checkout',
-    { paymentMethod },
-    { headers: authHeader(userId) }
-  );
+export type CheckoutShippingPayload = {
+  shippingName?: string;
+  shippingPhone?: string;
+  shippingLine1?: string;
+  shippingLine2?: string;
+  shippingCity?: string;
+  shippingPostalCode?: string;
+  shippingCountry?: string;
+};
+
+export async function checkoutShop(
+  paymentMethod = 'simulated-card',
+  shipping?: CheckoutShippingPayload
+): Promise<ShopOrder> {
+  const { data } = await shopClient.post<ShopOrder>('/checkout', { paymentMethod, shipping });
   return data;
 }
 
-export async function getShopOrders(userId?: string): Promise<ShopOrder[]> {
-  const { data } = await shopClient.get<ShopOrder[]>('/orders', { headers: authHeader(userId) });
+export async function getShopOrders(): Promise<ShopOrder[]> {
+  const { data } = await shopClient.get<ShopOrder[]>('/orders');
   return Array.isArray(data) ? data : [];
 }

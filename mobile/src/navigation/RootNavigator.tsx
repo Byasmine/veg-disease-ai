@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { type ComponentType } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createNativeStackNavigator, type NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useSidebar } from '../context/SidebarContext';
 import { WelcomeScreen } from '../screens/WelcomeScreen';
@@ -11,6 +11,9 @@ import { HistoryScreen } from '../screens/HistoryScreen';
 import { HelpScreen } from '../screens/HelpScreen';
 import { AboutScreen } from '../screens/AboutScreen';
 import { AuthScreen } from '../screens/AuthScreen';
+import { VerifySignupScreen } from '../screens/VerifySignupScreen';
+import { ForgotPasswordScreen } from '../screens/ForgotPasswordScreen';
+import { ResetPasswordScreen } from '../screens/ResetPasswordScreen';
 import { ShopScreen } from '../screens/ShopScreen';
 import { CartScreen } from '../screens/CartScreen';
 import { CheckoutScreen } from '../screens/CheckoutScreen';
@@ -18,7 +21,6 @@ import { OrdersScreen } from '../screens/OrdersScreen';
 import { MainTabNavigator } from './MainTabNavigator';
 import type { PredictionResponse } from '../types/api';
 import { colors } from '../theme/colors';
-import { useAuth } from '../context/AuthContext';
 
 function HeaderTitle({ icon, title }: { icon: keyof typeof Ionicons.glyphMap; title: string }) {
   return (
@@ -36,8 +38,11 @@ const headerStyles = StyleSheet.create({
 });
 
 export type RootStackParamList = {
-  Auth: undefined;
   MainTabs: undefined;
+  Auth: undefined;
+  VerifySignup: { email: string };
+  ForgotPassword: undefined;
+  ResetPassword: { email?: string };
   Welcome: undefined;
   Home: undefined;
   Result: { imageUri: string; result: PredictionResponse };
@@ -58,6 +63,8 @@ export type RootStackParamList = {
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+type RootProps<T extends keyof RootStackParamList> = NativeStackScreenProps<RootStackParamList, T>;
+
 function MenuButton() {
   const { openSidebar } = useSidebar();
   return (
@@ -68,20 +75,9 @@ function MenuButton() {
 }
 
 export function RootNavigator() {
-  const { user, initializing } = useAuth();
-
-  if (initializing) {
-    return (
-      <View style={styles.loaderWrap}>
-        <Ionicons name="leaf-outline" size={48} color={colors.olive} />
-        <Text style={styles.loaderText}>Loading account...</Text>
-      </View>
-    );
-  }
-
   return (
     <Stack.Navigator
-      initialRouteName={user ? 'MainTabs' : 'Auth'}
+      initialRouteName="MainTabs"
       screenOptions={{
         headerStyle: { backgroundColor: colors.olive },
         headerTintColor: colors.textOnOlive,
@@ -89,123 +85,110 @@ export function RootNavigator() {
         contentStyle: { backgroundColor: colors.cream },
       }}
     >
-      {!user ? (
-        <Stack.Screen name="Auth" component={AuthScreen} options={{ headerShown: false }} />
-      ) : (
-        <>
-          <Stack.Screen
-            name="MainTabs"
-            component={MainTabNavigator}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="Welcome"
-            component={WelcomeScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="Home"
-            component={HomeScreen}
-            options={({ navigation }) => ({
-              headerTitle: () => <HeaderTitle icon="leaf" title="Plant Health Scanner" />,
-              headerLeft: () => <MenuButton />,
-              headerRight: () => (
-                <TouchableOpacity
-                  onPress={() => navigation.navigate('History')}
-                  style={headerStyles.headerRight}
-                  hitSlop={12}
-                >
-                  <Ionicons name="time-outline" size={24} color={colors.textOnOlive} />
-                </TouchableOpacity>
-              ),
-            })}
-          />
-          <Stack.Screen
-            name="Result"
-            component={ResultScreen}
-            options={{ headerTitle: () => <HeaderTitle icon="flask" title="Diagnosis" /> }}
-          />
-          <Stack.Screen
-            name="Feedback"
-            component={FeedbackScreen}
-            options={{ headerTitle: () => <HeaderTitle icon="heart" title="Improve the AI" /> }}
-          />
-          <Stack.Screen
-            name="History"
-            component={HistoryScreen}
-            options={({ navigation }) => ({
-              headerTitle: () => <HeaderTitle icon="list" title="Scan history" />,
-              headerLeft: () => (
-                <TouchableOpacity
-                  onPress={() => navigation.goBack()}
-                  style={headerStyles.headerLeft}
-                  hitSlop={12}
-                >
-                  <Ionicons name="arrow-back" size={24} color={colors.textOnOlive} />
-                </TouchableOpacity>
-              ),
-              headerRight: () => <MenuButton />,
-            })}
-          />
-          <Stack.Screen
-            name="Help"
-            component={HelpScreen}
-            options={({ navigation }) => ({
-              headerTitle: () => <HeaderTitle icon="help-circle" title="Help" />,
-              headerLeft: () => (
-                <TouchableOpacity onPress={() => navigation.goBack()} style={headerStyles.headerLeft} hitSlop={12}>
-                  <Ionicons name="arrow-back" size={24} color={colors.textOnOlive} />
-                </TouchableOpacity>
-              ),
-              headerRight: () => <MenuButton />,
-            })}
-          />
-          <Stack.Screen
-            name="About"
-            component={AboutScreen}
-            options={({ navigation }) => ({
-              headerTitle: () => <HeaderTitle icon="information-circle" title="About" />,
-              headerLeft: () => (
-                <TouchableOpacity onPress={() => navigation.goBack()} style={headerStyles.headerLeft} hitSlop={12}>
-                  <Ionicons name="arrow-back" size={24} color={colors.textOnOlive} />
-                </TouchableOpacity>
-              ),
-              headerRight: () => <MenuButton />,
-            })}
-          />
-          <Stack.Screen
-            name="Shop"
-            component={ShopScreen}
-            options={{ headerTitle: () => <HeaderTitle icon="storefront" title="Shop" /> }}
-          />
-          <Stack.Screen
-            name="Cart"
-            component={CartScreen}
-            options={{ headerTitle: () => <HeaderTitle icon="cart" title="Cart" /> }}
-          />
-          <Stack.Screen
-            name="Checkout"
-            component={CheckoutScreen}
-            options={{ headerTitle: () => <HeaderTitle icon="card" title="Checkout" /> }}
-          />
-          <Stack.Screen
-            name="Orders"
-            component={OrdersScreen}
-            options={{ headerTitle: () => <HeaderTitle icon="receipt" title="Orders" /> }}
-          />
-        </>
-      )}
+      <Stack.Screen name="MainTabs" component={MainTabNavigator} options={{ headerShown: false }} />
+      <Stack.Screen name="Auth" component={AuthScreen} options={{ headerShown: false }} />
+      <Stack.Screen
+        name="VerifySignup"
+        component={VerifySignupScreen}
+        options={{ title: 'Verify email', headerBackTitle: 'Back' }}
+      />
+      <Stack.Screen
+        name="ForgotPassword"
+        component={ForgotPasswordScreen}
+        options={{ title: 'Forgot password' }}
+      />
+      <Stack.Screen
+        name="ResetPassword"
+        component={ResetPasswordScreen}
+        options={{ title: 'New password' }}
+      />
+      <Stack.Screen name="Welcome" component={WelcomeScreen} options={{ headerShown: false }} />
+      <Stack.Screen
+        name="Home"
+        component={HomeScreen as ComponentType<RootProps<'Home'>>}
+        options={({ navigation }) => ({
+          headerTitle: () => <HeaderTitle icon="leaf" title="Plant Health Scanner" />,
+          headerLeft: () => <MenuButton />,
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => navigation.navigate('History')}
+              style={headerStyles.headerRight}
+              hitSlop={12}
+            >
+              <Ionicons name="time-outline" size={24} color={colors.textOnOlive} />
+            </TouchableOpacity>
+          ),
+        })}
+      />
+      <Stack.Screen
+        name="Result"
+        component={ResultScreen as ComponentType<RootProps<'Result'>>}
+        options={{ headerTitle: () => <HeaderTitle icon="flask" title="Diagnosis" /> }}
+      />
+      <Stack.Screen
+        name="Feedback"
+        component={FeedbackScreen as ComponentType<RootProps<'Feedback'>>}
+        options={{ headerTitle: () => <HeaderTitle icon="heart" title="Improve the AI" /> }}
+      />
+      <Stack.Screen
+        name="History"
+        component={HistoryScreen}
+        options={({ navigation }) => ({
+          headerTitle: () => <HeaderTitle icon="list" title="Scan history" />,
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => navigation.goBack()} style={headerStyles.headerLeft} hitSlop={12}>
+              <Ionicons name="arrow-back" size={24} color={colors.textOnOlive} />
+            </TouchableOpacity>
+          ),
+          headerRight: () => <MenuButton />,
+        })}
+      />
+      <Stack.Screen
+        name="Help"
+        component={HelpScreen}
+        options={({ navigation }) => ({
+          headerTitle: () => <HeaderTitle icon="help-circle" title="Help" />,
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => navigation.goBack()} style={headerStyles.headerLeft} hitSlop={12}>
+              <Ionicons name="arrow-back" size={24} color={colors.textOnOlive} />
+            </TouchableOpacity>
+          ),
+          headerRight: () => <MenuButton />,
+        })}
+      />
+      <Stack.Screen
+        name="About"
+        component={AboutScreen}
+        options={({ navigation }) => ({
+          headerTitle: () => <HeaderTitle icon="information-circle" title="About" />,
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => navigation.goBack()} style={headerStyles.headerLeft} hitSlop={12}>
+              <Ionicons name="arrow-back" size={24} color={colors.textOnOlive} />
+            </TouchableOpacity>
+          ),
+          headerRight: () => <MenuButton />,
+        })}
+      />
+      <Stack.Screen
+        name="Shop"
+        component={ShopScreen}
+        options={{ headerTitle: () => <HeaderTitle icon="storefront" title="Shop" /> }}
+      />
+      <Stack.Screen
+        name="Cart"
+        component={CartScreen}
+        options={{ headerTitle: () => <HeaderTitle icon="cart" title="Cart" /> }}
+      />
+      <Stack.Screen
+        name="Checkout"
+        component={CheckoutScreen}
+        options={{ headerTitle: () => <HeaderTitle icon="card" title="Checkout" /> }}
+      />
+      <Stack.Screen
+        name="Orders"
+        component={OrdersScreen}
+        options={{ headerTitle: () => <HeaderTitle icon="receipt" title="Orders" /> }}
+      />
     </Stack.Navigator>
   );
 }
-
-const styles = StyleSheet.create({
-  loaderWrap: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.cream,
-    gap: 10,
-  },
-  loaderText: { color: colors.textSecondary, fontSize: 15, fontWeight: '600' },
-});

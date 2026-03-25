@@ -23,7 +23,7 @@ import {
 import { TreatmentSolutions } from '../components/TreatmentSolutions';
 import { generateAndShareReportPdf } from '../services/reportPdf';
 import Toast from 'react-native-toast-message';
-import type { RootStackParamList } from '../navigation/RootNavigator';
+import type { AnalyzeStackParamList } from '../navigation/analyzeStackTypes';
 import type { PredictionResponse } from '../types/api';
 
 type ConfidenceLevel = 'High' | 'Moderate' | 'Low';
@@ -51,7 +51,7 @@ function treatmentToBullets(text: string): string[] {
 
 type Props = {
   route: { params: { imageUri: string; result: PredictionResponse } };
-  navigation: NativeStackNavigationProp<RootStackParamList, 'Result'>;
+  navigation: NativeStackNavigationProp<AnalyzeStackParamList, 'Result'>;
 };
 
 function formatLabel(s: string): string {

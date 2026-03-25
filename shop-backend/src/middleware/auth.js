@@ -1,17 +1,18 @@
-function requireAuth(req, res, next) {
-  const userId = req.header('x-user-id');
+const { verifyToken } = require('../services/authService');
 
-  // Placeholder auth for MVP:
-  // - In production, replace with Firebase Admin token verification.
-  // - Keep x-user-id for local testing.
-  if (!userId) {
+function requireAuth(req, res, next) {
+  const header = req.headers.authorization || '';
+  const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+
+  const user = verifyToken(token);
+  if (!user || !user.id) {
     return res.status(401).json({
       status: 'error',
-      message: 'Unauthorized: provide x-user-id header (or Firebase bearer token in future).',
+      message: 'Unauthorized: sign in and send Authorization: Bearer <token>.',
     });
   }
 
-  req.user = { id: userId };
+  req.user = { id: user.id, email: user.email };
   return next();
 }
 

@@ -39,6 +39,16 @@ export interface ShopOrderItem {
   lineTotal: number;
 }
 
+export interface ShopOrderShipping {
+  name?: string;
+  phone?: string;
+  line1?: string;
+  line2?: string;
+  city?: string;
+  postalCode?: string;
+  country?: string;
+}
+
 export interface ShopOrder {
   id: string;
   userId: string;
@@ -48,4 +58,5 @@ export interface ShopOrder {
   total: number;
   currency: string;
   createdAt: string;
+  shipping?: ShopOrderShipping;
 }

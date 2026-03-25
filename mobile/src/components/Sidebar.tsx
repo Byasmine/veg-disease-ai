@@ -7,7 +7,6 @@ import {
   TouchableWithoutFeedback,
   Platform,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   useAnimatedStyle,
@@ -17,12 +16,13 @@ import Animated, {
 import { useSidebar } from '../context/SidebarContext';
 import { colors } from '../theme/colors';
 import type { RootStackParamList } from '../navigation/RootNavigator';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { navigateRoot } from '../navigation/navigationRef';
+import { useAuth } from '../context/AuthContext';
 
 const SIDEBAR_WIDTH = 280;
 const OVERLAY_OPACITY = 0.5;
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
+const AUTH_ROUTES: (keyof RootStackParamList)[] = ['Home', 'Cart', 'Orders', 'History'];
 
 interface SidebarItem {
   icon: keyof typeof Ionicons.glyphMap;
@@ -43,7 +43,7 @@ const ITEMS: SidebarItem[] = [
 ];
 
 export function Sidebar() {
-  const navigation = useNavigation<Nav>();
+  const { user } = useAuth();
   const { isOpen, closeSidebar } = useSidebar();
   const translateX = useSharedValue(-SIDEBAR_WIDTH);
   const overlayOpacity = useSharedValue(0);
@@ -68,13 +68,16 @@ export function Sidebar() {
 
   const handleNavigate = (item: SidebarItem) => {
     closeSidebar();
-    const nav = navigation as any;
+    if (AUTH_ROUTES.includes(item.route) && !user) {
+      navigateRoot('Auth');
+      return;
+    }
     if (item.route === 'Home') {
-      nav.replace('Home');
+      navigateRoot('Home');
     } else if (item.route === 'Welcome') {
-      nav.navigate('Welcome');
+      navigateRoot('Welcome');
     } else {
-      nav.navigate(item.route, item.params);
+      navigateRoot(item.route as string, item.params);
     }
   };
 

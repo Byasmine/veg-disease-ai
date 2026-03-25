@@ -6,33 +6,36 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
-  Image,
   Platform,
   ActivityIndicator,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
 import { GlassCard } from '../../components/GlassCard';
-import { GradientButton } from '../../components/GradientButton';
-import { colors, accentGradient } from '../../theme/colors';
+import { ShopProductCard } from '../../components/shop/ShopProductCard';
+import { colors } from '../../theme/colors';
 import { addShopCartItem, getShopCategories, getShopProducts } from '../../services/shopApi';
 import type { ShopCategory, ShopProduct } from '../../types/shop';
 import type { ShopStackParamList } from '../../navigation/MainTabNavigator';
+import { useAuth } from '../../context/AuthContext';
+import { goToAuth } from '../../navigation/navigationRef';
 
 type Props = { navigation: NativeStackNavigationProp<ShopStackParamList, 'ShopHome'> };
 type PriceBand = 'all' | 'under10' | '10to20' | 'above20';
 
 const PRICE_OPTIONS: { key: PriceBand; label: string }[] = [
-  { key: 'all', label: 'All prices' },
+  { key: 'all', label: 'All' },
   { key: 'under10', label: '< $10' },
-  { key: '10to20', label: '$10 – $20' },
+  { key: '10to20', label: '$10–20' },
   { key: 'above20', label: '> $20' },
 ];
+
+const H_PAD = 20;
 
 function matchesPrice(price: number, band: PriceBand): boolean {
   if (band === 'under10') return price < 10;
@@ -46,12 +49,15 @@ function categoryNameForId(categories: ShopCategory[], id: string): string {
 }
 
 export function ShopHomeScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   const [categories, setCategories] = useState<ShopCategory[]>([]);
   const [products, setProducts] = useState<ShopProduct[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedPrice, setSelectedPrice] = useState<PriceBand>('all');
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
+  const [addingId, setAddingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -90,11 +96,19 @@ export function ShopHomeScreen({ navigation }: Props) {
   };
 
   const addToCart = async (productId: string) => {
+    if (!user) {
+      Toast.show({ type: 'info', text1: 'Sign in required', text2: 'Sign in to add items to your cart.' });
+      goToAuth(navigation);
+      return;
+    }
+    setAddingId(productId);
     try {
       await addShopCartItem(productId, 1);
       Toast.show({ type: 'success', text1: 'Added to cart' });
     } catch (e) {
       Toast.show({ type: 'error', text1: 'Could not add item', text2: (e as Error)?.message });
+    } finally {
+      setAddingId(null);
     }
   };
 
@@ -105,437 +119,378 @@ export function ShopHomeScreen({ navigation }: Props) {
     }
   };
 
-  return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      <StatusBar style="dark" />
+  const topPad = Math.max(insets.top, 12);
 
-      {/* Hero: gradient banner + search — premium first impression */}
-      <Animated.View entering={FadeInDown.duration(280)}>
-        <View style={styles.heroOuter}>
-          <LinearGradient colors={[...accentGradient]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroGradient}>
-            <View style={styles.heroHeaderRow}>
-              <View>
-                <Text style={styles.heroEyebrow}>Marketplace</Text>
-                <Text style={styles.heroTitle}>Agriculture Shop</Text>
+  return (
+    <View style={styles.screen}>
+      <StatusBar style="dark" />
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* —— Minimal header strip (no copy); sage tint separates from main cream —— */}
+        <View style={[styles.headerStrip, { paddingTop: topPad }]}>
+          <View style={styles.headerRow}>
+            <View style={styles.headerBrand}>
+              <View style={styles.shopLogoCircle} accessibilityRole="image" accessibilityLabel="Leaf Doctor">
+                <Ionicons name="leaf" size={28} color={colors.olive} />
               </View>
-              <TouchableOpacity style={styles.cartPill} onPress={() => navigation.navigate('Cart')} activeOpacity={0.85}>
-                <Ionicons name="cart-outline" size={18} color={colors.textOnOlive} />
-                <Text style={styles.cartPillText}>Cart</Text>
+              <Text style={styles.byAgilicis}>Leaf Doctor</Text>
+            </View>
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                style={styles.iconBtn}
+                onPress={() => navigation.navigate('Categories')}
+                accessibilityLabel="Browse categories"
+                activeOpacity={0.85}
+              >
+                <Ionicons name="grid-outline" size={22} color={colors.olive} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.iconBtn}
+                onPress={() => navigation.navigate('Cart')}
+                accessibilityLabel="Open cart"
+                activeOpacity={0.85}
+              >
+                <Ionicons name="bag-outline" size={22} color={colors.olive} />
               </TouchableOpacity>
             </View>
-            <Text style={styles.heroSubtitle}>Curated supplies for healthy crops — treatments, seeds & tools.</Text>
+          </View>
+          
+        {/* —— Search —— */}
+        <Animated.View entering={FadeInDown.duration(240)} style={styles.searchSection}>
+          <View style={styles.searchBar}>
+            <Ionicons name="search" size={20} color={colors.olive} style={styles.searchIcon} />
+            <TextInput
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Search products…"
+              placeholderTextColor={colors.textSecondary}
+              style={styles.searchInput}
+              returnKeyType="search"
+            />
+            {query.length > 0 ? (
+              <TouchableOpacity onPress={() => setQuery('')} hitSlop={10} accessibilityLabel="Clear search">
+                <Ionicons name="close-circle" size={22} color={colors.textSecondary} />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        </Animated.View>
+        </View>
 
-            <View style={styles.searchElevated}>
-              <Ionicons name="search" size={20} color={colors.taupe} />
-              <TextInput
-                value={query}
-                onChangeText={setQuery}
-                placeholder="Search by name or keyword…"
-                placeholderTextColor={colors.textSecondary}
-                style={styles.searchInput}
-              />
-              {query.length > 0 ? (
-                <TouchableOpacity onPress={() => setQuery('')} hitSlop={8}>
-                  <Ionicons name="close-circle" size={22} color={colors.textSecondary} />
+
+        {/* —— Filters: single card, clear hierarchy —— */}
+        <Animated.View entering={FadeInDown.delay(40).duration(240)} style={styles.filterSection}>
+          <View style={styles.filterPanel}>
+            <View style={styles.filterPanelHead}>
+              <Text style={styles.filterPanelTitle}>Refine</Text>
+              {hasActiveFilters ? (
+                <TouchableOpacity onPress={resetFilters} style={styles.resetTextBtn} hitSlop={8}>
+                  <Text style={styles.resetTextBtnLabel}>Clear all</Text>
                 </TouchableOpacity>
               ) : null}
             </View>
-          </LinearGradient>
-        </View>
-      </Animated.View>
 
-      {/* Filters in one glass panel for visual grouping */}
-      <Animated.View entering={FadeInDown.delay(80).duration(280)}>
-        <GlassCard style={styles.filterCard}>
-          <View style={styles.filterCardHeader}>
-            <Text style={styles.filterCardTitle}>Browse</Text>
-            {hasActiveFilters ? (
-              <TouchableOpacity onPress={resetFilters} style={styles.resetChip}>
-                <Ionicons name="refresh-outline" size={14} color={colors.olive} />
-                <Text style={styles.resetChipText}>Reset</Text>
-              </TouchableOpacity>
-            ) : null}
-          </View>
-
-          <Text style={styles.filterLabel}>Category</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-            <TouchableOpacity
-              style={[styles.chip, selectedCategory === 'all' && styles.chipActive]}
-              onPress={() => setSelectedCategory('all')}
-            >
-              <Text style={[styles.chipText, selectedCategory === 'all' && styles.chipTextActive]}>All</Text>
-            </TouchableOpacity>
-            {categories.map((cat) => (
+            <Text style={styles.filterGroupLabel}>Category</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScroll}>
               <TouchableOpacity
-                key={cat.id}
-                style={[styles.chip, selectedCategory === cat.id && styles.chipActive]}
-                onPress={() => setSelectedCategory(cat.id)}
+                style={[styles.chip, selectedCategory === 'all' && styles.chipOn]}
+                onPress={() => setSelectedCategory('all')}
               >
-                <Text style={[styles.chipText, selectedCategory === cat.id && styles.chipTextActive]}>{cat.name}</Text>
+                <Text style={[styles.chipLabel, selectedCategory === 'all' && styles.chipLabelOn]}>All</Text>
               </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          <Text style={[styles.filterLabel, styles.filterLabelSpaced]}>Price range</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-            {PRICE_OPTIONS.map((opt) => (
-              <TouchableOpacity
-                key={opt.key}
-                style={[styles.chip, selectedPrice === opt.key && styles.chipActive]}
-                onPress={() => setSelectedPrice(opt.key)}
-              >
-                <Text style={[styles.chipText, selectedPrice === opt.key && styles.chipTextActive]}>{opt.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </GlassCard>
-      </Animated.View>
-
-      {/* Results header */}
-      <Animated.View entering={FadeInDown.delay(140).duration(280)} style={styles.resultsHead}>
-        <View>
-          <Text style={styles.resultsTitle}>Products</Text>
-          <Text style={styles.resultsSub}>
-            {loading ? 'Loading catalog…' : `${filteredProducts.length} ${filteredProducts.length === 1 ? 'item' : 'items'}`}
-          </Text>
-        </View>
-        <TouchableOpacity style={styles.browseAll} onPress={() => navigation.navigate('Categories')}>
-          <Text style={styles.browseAllText}>All categories</Text>
-          <Ionicons name="chevron-forward" size={16} color={colors.olive} />
-        </TouchableOpacity>
-      </Animated.View>
-
-      {loading ? (
-        <View style={styles.skeletonWrap}>
-          <View style={styles.skeletonCard}>
-            <ActivityIndicator size="large" color={colors.olive} />
-            <Text style={styles.skeletonText}>Loading catalog…</Text>
-          </View>
-        </View>
-      ) : null}
-
-      {!loading &&
-        filteredProducts.map((product, index) => (
-          <Animated.View key={product.id} entering={FadeInDown.delay(180 + index * 40).duration(260)}>
-            <GlassCard style={styles.productCard}>
-              <TouchableOpacity activeOpacity={0.92} onPress={() => navigation.navigate('ProductDetails', { product })}>
-                <View style={styles.productRow}>
-                  <View style={styles.imageFrame}>
-                    {product.imageUrl ? (
-                      <Image source={{ uri: product.imageUrl }} style={styles.productImage} resizeMode="cover" />
-                    ) : (
-                      <View style={[styles.productImage, styles.productImageFallback]}>
-                        <Ionicons name="leaf-outline" size={28} color={colors.taupe} />
-                      </View>
-                    )}
-                  </View>
-                  <View style={styles.productBody}>
-                    <View style={styles.pillRow}>
-                      <View style={styles.categoryPill}>
-                        <Text style={styles.categoryPillText} numberOfLines={1}>
-                          {categoryNameForId(categories, product.categoryId)}
-                        </Text>
-                      </View>
-                      {product.stock > 0 ? (
-                        <View style={styles.stockPill}>
-                          <View style={styles.stockDot} />
-                          <Text style={styles.stockPillText}>In stock</Text>
-                        </View>
-                      ) : (
-                        <View style={[styles.stockPill, styles.stockPillOut]}>
-                          <Text style={styles.stockPillTextOut}>Out of stock</Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text style={styles.productName} numberOfLines={2}>
-                      {product.name}
-                    </Text>
-                    <Text style={styles.productDesc} numberOfLines={2}>
-                      {product.description ?? 'Tap for full details'}
-                    </Text>
-                    <View style={styles.priceRow}>
-                      <Text style={styles.price}>${product.price.toFixed(2)}</Text>
-                      <Text style={styles.currency}>{product.currency ?? 'USD'}</Text>
-                    </View>
-                  </View>
-                </View>
-              </TouchableOpacity>
-              <View style={styles.divider} />
-              <View style={styles.cardActions}>
-                <GradientButton title="Add to cart" onPress={() => addToCart(product.id)} disabled={product.stock <= 0} />
+              {categories.map((cat) => (
                 <TouchableOpacity
-                  style={styles.secondaryBtn}
-                  onPress={() => navigation.navigate('ProductDetails', { product })}
+                  key={cat.id}
+                  style={[styles.chip, selectedCategory === cat.id && styles.chipOn]}
+                  onPress={() => setSelectedCategory(cat.id)}
                 >
-                  <Text style={styles.secondaryBtnText}>Details</Text>
-                  <Ionicons name="arrow-forward" size={16} color={colors.olive} />
+                  <Text style={[styles.chipLabel, selectedCategory === cat.id && styles.chipLabelOn]} numberOfLines={1}>
+                    {cat.name}
+                  </Text>
                 </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <Text style={[styles.filterGroupLabel, styles.filterGroupLabelSpaced]}>Price</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScroll}>
+              {PRICE_OPTIONS.map((opt) => (
+                <TouchableOpacity
+                  key={opt.key}
+                  style={[styles.chip, selectedPrice === opt.key && styles.chipOn]}
+                  onPress={() => setSelectedPrice(opt.key)}
+                >
+                  <Text style={[styles.chipLabel, selectedPrice === opt.key && styles.chipLabelOn]}>{opt.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </Animated.View>
+
+        {/* —— Store catalog (single column) —— */}
+        <View style={styles.catalogHead}>
+          <View>
+            <Text style={styles.catalogTitle}>Agriculture products</Text>
+            <Text style={styles.catalogMeta}>
+              {loading
+                ? 'Loading…'
+                : `${filteredProducts.length} ${filteredProducts.length === 1 ? 'item' : 'items'} · Leaf Doctor store`}
+            </Text>
+          </View>
+        </View>
+
+        {loading ? (
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="large" color={colors.olive} />
+            <Text style={styles.loadingText}>Loading catalog…</Text>
+          </View>
+        ) : null}
+
+        {!loading &&
+          filteredProducts.map((product, index) => (
+            <Animated.View
+              key={product.id}
+              entering={FadeInDown.delay(Math.min(index * 40, 420)).duration(240)}
+              style={styles.productCardWrap}
+            >
+              <ShopProductCard
+                product={product}
+                categoryLabel={categoryNameForId(categories, product.categoryId)}
+                onProductPress={() => navigation.navigate('ProductDetails', { product })}
+                onAddToCart={() => addToCart(product.id)}
+                loading={addingId === product.id}
+              />
+            </Animated.View>
+          ))}
+
+        {!loading && filteredProducts.length === 0 ? (
+          <Animated.View entering={FadeInDown.duration(280)} style={styles.emptyWrap}>
+            <GlassCard style={styles.emptyCard}>
+              <View style={styles.emptyIconWrap}>
+                <Ionicons name="search-outline" size={28} color={colors.olive} />
               </View>
+              <Text style={styles.emptyTitle}>Nothing matches</Text>
+              <Text style={styles.emptyText}>Try another search or clear filters to see everything in the store.</Text>
+              {hasActiveFilters ? (
+                <TouchableOpacity style={styles.emptyCta} onPress={resetFilters} activeOpacity={0.9}>
+                  <Text style={styles.emptyCtaText}>Clear filters</Text>
+                </TouchableOpacity>
+              ) : null}
             </GlassCard>
           </Animated.View>
-        ))}
+        ) : null}
 
-      {!loading && filteredProducts.length === 0 ? (
-        <Animated.View entering={FadeInDown.duration(300)}>
-          <GlassCard style={styles.emptyCard}>
-            <View style={styles.emptyIconWrap}>
-              <Ionicons name="search-outline" size={32} color={colors.olive} />
-            </View>
-            <Text style={styles.emptyTitle}>No matches</Text>
-            <Text style={styles.emptyText}>Adjust your search, category, or price filters to see more products.</Text>
-            {hasActiveFilters ? (
-              <TouchableOpacity style={styles.emptyCta} onPress={resetFilters}>
-                <Text style={styles.emptyCtaText}>Clear all filters</Text>
-              </TouchableOpacity>
-            ) : null}
-          </GlassCard>
-        </Animated.View>
-      ) : null}
-
-      <TouchableOpacity style={styles.bottomLink} onPress={openOrdersTab} activeOpacity={0.7}>
-        <Ionicons name="receipt-outline" size={18} color={colors.olive} />
-        <Text style={styles.bottomLinkText}>Order history</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        <TouchableOpacity style={styles.footerLink} onPress={openOrdersTab} activeOpacity={0.75}>
+          <Ionicons name="receipt-outline" size={18} color={colors.olive} />
+          <Text style={styles.footerLinkText}>Order history</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
   );
 }
 
-const shadowCard = Platform.select({
-  ios: {
-    shadowColor: '#2C2C2C',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-  },
-  android: { elevation: 6 },
-  web: { boxShadow: '0 8px 24px rgba(44,44,44,0.08)' },
-});
-
 const styles = StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: colors.cream },
-  content: { paddingBottom: 48 },
-  heroOuter: {
-    marginHorizontal: 20,
-    marginTop: 8,
-    marginBottom: 16,
-    borderRadius: 22,
-    overflow: 'hidden',
-    ...shadowCard,
+  screen: { flex: 1, backgroundColor: colors.cream },
+  scroll: { flex: 1 },
+  content: { flexGrow: 1 },
+  /** Lighter sage than main `cream` body so the bar reads as its own band. */
+  headerStrip: {
+    backgroundColor: colors.olive,
+    paddingHorizontal: H_PAD,
+    paddingBottom: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
   },
-  heroGradient: {
-    padding: 22,
-    paddingBottom: 20,
-  },
-  heroHeaderRow: {
+  headerRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 10,
+    gap: 12,
   },
-  heroEyebrow: {
-    fontSize: 11,
+  headerBrand: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+    minWidth: 0,
+  },
+  /** Same mark as HomeHub — leaf in olive roundel. */
+  shopLogoCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: colors.cream,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 5,
+      },
+      android: { elevation: 2 },
+      default: {},
+    }),
+  },
+  byAgilicis: {
+    fontSize: 20,
     fontWeight: '700',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    color: 'rgba(255,255,255,0.75)',
-    marginBottom: 4,
+    color: colors.creamMuted,
+    letterSpacing: 0.2,
+    flexShrink: 1,
   },
-  heroTitle: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: colors.textOnOlive,
-    letterSpacing: -0.5,
-  },
-  heroSubtitle: {
-    fontSize: 14,
-    lineHeight: 21,
-    color: 'rgba(255,255,255,0.88)',
-    marginBottom: 16,
-    maxWidth: '92%',
-  },
-  cartPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(255,255,255,0.22)',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.35)',
-  },
-  cartPillText: { color: colors.textOnOlive, fontWeight: '700', fontSize: 14 },
-  searchElevated: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.card,
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 },
+  iconBtn: {
+    width: 44,
+    height: 44,
     borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 4,
-    gap: 10,
+    backgroundColor: colors.creamMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
+    borderColor: colors.border,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#2C2C2C',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+      },
+      android: { elevation: 1 },
+      default: {},
+    }),
   },
+  searchSection: {
+    paddingHorizontal: H_PAD,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.creamMuted,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 14,
+    paddingVertical: Platform.OS === 'web' ? 10 : 4,
+    minHeight: 50,
+  },
+  searchIcon: { marginRight: 4 },
   searchInput: {
     flex: 1,
-    color: colors.textPrimary,
     fontSize: 16,
-    paddingVertical: Platform.OS === 'web' ? 12 : 14,
+    color: colors.textPrimary,
+    paddingVertical: Platform.OS === 'web' ? 10 : 12,
   },
-  filterCard: { marginHorizontal: 20, marginBottom: 8 },
-  filterCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
+  filterSection: {
+    paddingHorizontal: H_PAD,
+    paddingTop: 8,
+    paddingBottom: 4,
   },
-  filterCardTitle: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
-  resetChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: colors.olive + '14',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  resetChipText: { fontSize: 13, fontWeight: '700', color: colors.olive },
-  filterLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.9,
-    textTransform: 'uppercase',
-    color: colors.textSecondary,
-    marginBottom: 8,
-  },
-  filterLabelSpaced: { marginTop: 14 },
-  chipRow: { flexDirection: 'row', gap: 8, paddingBottom: 4 },
-  chip: {
-    paddingVertical: 9,
-    paddingHorizontal: 16,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.cream,
-  },
-  chipActive: { backgroundColor: colors.olive, borderColor: colors.olive },
-  chipText: { color: colors.textPrimary, fontWeight: '600', fontSize: 14 },
-  chipTextActive: { color: colors.textOnOlive },
-  resultsHead: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginTop: 8,
-    marginBottom: 12,
-  },
-  resultsTitle: { fontSize: 22, fontWeight: '800', color: colors.textPrimary, letterSpacing: -0.3 },
-  resultsSub: { marginTop: 2, fontSize: 13, color: colors.textSecondary, fontWeight: '600' },
-  browseAll: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  browseAllText: { fontSize: 14, fontWeight: '700', color: colors.olive },
-  skeletonWrap: { paddingHorizontal: 20, gap: 10 },
-  skeletonCard: {
+  filterPanel: {
     backgroundColor: colors.card,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 28,
+    padding: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#2C2C2C',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.06,
+        shadowRadius: 12,
+      },
+      android: { elevation: 2 },
+      default: {},
+    }),
+  },
+  filterPanelHead: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
-  },
-  skeletonText: { marginTop: 10, color: colors.textSecondary, fontWeight: '600' },
-  productCard: {
-    marginHorizontal: 20,
+    justifyContent: 'space-between',
     marginBottom: 14,
-    overflow: 'hidden',
   },
-  productRow: { flexDirection: 'row', gap: 14 },
-  imageFrame: {
-    borderRadius: 16,
-    overflow: 'hidden',
+  filterPanelTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  resetTextBtn: { paddingVertical: 4, paddingHorizontal: 4 },
+  resetTextBtnLabel: { fontSize: 14, fontWeight: '700', color: colors.olive },
+  filterGroupLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: colors.textSecondary,
+    marginBottom: 8,
+  },
+  filterGroupLabelSpaced: { marginTop: 14 },
+  chipScroll: { flexDirection: 'row', flexWrap: 'nowrap', gap: 8, paddingBottom: 2 },
+  chip: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    backgroundColor: colors.cream,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.cream,
   },
-  productImage: { width: 100, height: 100, backgroundColor: colors.cream },
-  productImageFallback: { alignItems: 'center', justifyContent: 'center' },
-  productBody: { flex: 1, justifyContent: 'center' },
-  pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 6 },
-  categoryPill: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    backgroundColor: colors.olive + '18',
-    maxWidth: '70%',
-  },
-  categoryPillText: { fontSize: 11, fontWeight: '700', color: colors.olive, textTransform: 'uppercase', letterSpacing: 0.3 },
-  stockPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    backgroundColor: colors.success + '18',
-  },
-  stockDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.success },
-  stockPillText: { fontSize: 11, fontWeight: '700', color: colors.success },
-  stockPillOut: { backgroundColor: colors.danger + '14' },
-  stockPillTextOut: { fontSize: 11, fontWeight: '700', color: colors.danger },
-  productName: { fontSize: 17, fontWeight: '800', color: colors.textPrimary, lineHeight: 22 },
-  productDesc: { marginTop: 4, fontSize: 13, color: colors.textSecondary, lineHeight: 19 },
-  priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: 10 },
-  price: { fontSize: 20, fontWeight: '800', color: colors.olive },
-  currency: { fontSize: 12, fontWeight: '600', color: colors.textSecondary, textTransform: 'uppercase' },
-  divider: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginVertical: 14,
-    marginHorizontal: -4,
-  },
-  cardActions: { gap: 8 },
-  secondaryBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    borderWidth: 1.5,
+  chipOn: {
+    backgroundColor: colors.olive,
     borderColor: colors.olive,
-    borderRadius: 14,
-    paddingVertical: 12,
-    backgroundColor: colors.card,
   },
-  secondaryBtnText: { color: colors.olive, fontWeight: '700', fontSize: 15 },
-  emptyCard: { marginHorizontal: 20, alignItems: 'center', paddingVertical: 28 },
-  emptyIconWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    backgroundColor: colors.olive + '14',
+  chipLabel: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
+  chipLabelOn: { color: colors.textOnOlive },
+  catalogHead: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    paddingHorizontal: H_PAD,
+    marginTop: 20,
+    marginBottom: 12,
+  },
+  catalogTitle: { fontSize: 20, fontWeight: '800', color: colors.textPrimary, letterSpacing: -0.3 },
+  catalogMeta: { marginTop: 2, fontSize: 13, fontWeight: '600', color: colors.textSecondary },
+  productCardWrap: { marginHorizontal: H_PAD, marginBottom: 14 },
+  loadingBox: {
+    marginHorizontal: H_PAD,
+    paddingVertical: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 14,
   },
-  emptyTitle: { fontSize: 18, fontWeight: '800', color: colors.textPrimary, marginBottom: 8 },
-  emptyText: { textAlign: 'center', color: colors.textSecondary, lineHeight: 22, paddingHorizontal: 8, marginBottom: 16 },
+  loadingText: { marginTop: 12, fontSize: 14, fontWeight: '600', color: colors.textSecondary },
+  emptyWrap: { paddingHorizontal: H_PAD, marginTop: 8 },
+  emptyCard: { alignItems: 'center', paddingVertical: 28, paddingHorizontal: 16 },
+  emptyIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: colors.olive + '12',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  emptyTitle: { fontSize: 17, fontWeight: '800', color: colors.textPrimary, marginBottom: 6 },
+  emptyText: { textAlign: 'center', color: colors.textSecondary, lineHeight: 21, marginBottom: 16 },
   emptyCta: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 11,
     borderRadius: 999,
     backgroundColor: colors.olive,
   },
-  emptyCtaText: { color: colors.textOnOlive, fontWeight: '700' },
-  bottomLink: {
-    marginTop: 12,
+  emptyCtaText: { color: colors.textOnOlive, fontWeight: '700', fontSize: 15 },
+  footerLink: {
+    marginTop: 20,
     alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 16,
   },
-  bottomLinkText: { color: colors.olive, fontWeight: '700', fontSize: 15 },
+  footerLinkText: { color: colors.olive, fontWeight: '700', fontSize: 15 },
 });

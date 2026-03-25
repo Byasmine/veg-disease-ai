@@ -75,18 +75,6 @@ export function HomeHubScreen() {
             delay={280}
           />
           <MenuButton
-            icon="cart-outline"
-            label="Cart"
-            onPress={() => (navigation as any).navigate('Shop', { screen: 'Cart' })}
-            delay={340}
-          />
-          <MenuButton
-            icon="receipt-outline"
-            label="Orders"
-            onPress={() => (navigation as any).navigate('OrdersHistory')}
-            delay={400}
-          />
-          <MenuButton
             icon="help-circle-outline"
             label="Help"
             onPress={() => (navigation as any).getParent()?.navigate('Help')}
