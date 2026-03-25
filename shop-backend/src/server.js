@@ -7,6 +7,7 @@ const { migrate } = require('./db/migrate');
 const shopRoutes = require('./routes/shopRoutes');
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
+const { sendEmail, isEmailApiConfigured } = require('./services/emailService');
 
 const app = express();
 const PORT = Number(process.env.PORT || 8082);
@@ -29,6 +30,31 @@ app.get('/', (_req, res) => {
       products: '/api/shop/products',
     },
   });
+});
+
+// Simple integration test for Railway email delivery (disabled by default).
+// Enable with: ALLOW_EMAIL_TEST=true in Railway env vars.
+app.post('/test-email', async (req, res) => {
+  try {
+    if (process.env.ALLOW_EMAIL_TEST !== 'true') {
+      return res.status(404).json({ ok: false, message: 'test endpoint disabled' });
+    }
+
+    if (!isEmailApiConfigured()) {
+      return res.status(500).json({ ok: false, message: 'email_api_not_configured' });
+    }
+
+    const { to, subject, html, text } = req.body || {};
+    if (!to) return res.status(400).json({ ok: false, message: 'Missing `to` in body' });
+
+    const testSubject = subject || 'Leaf Doctor test email';
+    const testHtml = html || '<p>Test email from Leaf Doctor</p>';
+
+    const response = await sendEmail(to, testSubject, testHtml, text);
+    return res.json({ ok: true, id: response?.id ?? response?.messageId ?? null });
+  } catch (e) {
+    return res.status(500).json({ ok: false, message: e?.message || String(e) });
+  }
 });
 
 app.use('/api/auth', authRoutes);

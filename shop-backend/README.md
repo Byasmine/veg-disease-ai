@@ -38,10 +38,10 @@ Server: `http://localhost:8082` (migrations run on startup).
 | `DATABASE_URL` | PostgreSQL connection string |
 | `JWT_SECRET` | Required; signs access tokens |
 | `PUBLIC_BASE_URL` | Public URL of this API (avatar links). Use LAN IP or HTTPS in production so clients can load `/uploads/...` |
-| `SMTP_*`, `EMAIL_FROM` | Optional; OTP emails. Without SMTP, OTPs are logged to the console (dev) |
+| `RESEND_API_KEY`, `EMAIL_FROM` | Optional; OTP + order confirmation emails via Resend. If `RESEND_API_KEY` is missing, emails are skipped and details are logged (dev) |
 | `DATABASE_SSL` | Set `false` for local Postgres; hosted DBs often need TLS (see `.env.example`) |
 
-**SMTP:** Port **587** uses STARTTLS → `SMTP_SECURE=false`. Port **465** uses implicit TLS → `SMTP_SECURE=true`. Mixing **587 + `SMTP_SECURE=true`** causes TLS errors.
+**Resend:** HTTPS email API (no SMTP ports needed).
 
 ## Railway (Docker)
 

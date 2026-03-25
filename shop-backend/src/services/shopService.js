@@ -1,6 +1,6 @@
 const { v4: uuidv4 } = require('uuid');
 const { getPool } = require('../db/pool');
-const { sendMail } = require('./emailService');
+const { sendEmail } = require('./emailService');
 const { orderConfirmationEmailTemplate } = require('./emailTemplates');
 
 function mapProductRow(row) {
@@ -295,12 +295,12 @@ async function checkout(userId, paymentMethod = 'simulated-card', shipping = {})
         customerName,
       });
       console.log(`[email] order confirmation: sending order=${orderId} userId=${userId} to=${userEmail}`);
-      const mailResult = await sendMail({
-        to: userEmail,
-        subject: `Your Leaf Doctor order #${orderId.slice(0, 8)} is confirmed`,
-        text: `Your order #${orderId} is confirmed.\n\nTotal: $${Number(order.total || 0).toFixed(2)}\nStatus: ${order.status}\n`,
+      const mailResult = await sendEmail(
+        userEmail,
+        `Your Leaf Doctor order #${orderId.slice(0, 8)} is confirmed`,
         html,
-      });
+        `Your order #${orderId} is confirmed.\n\nTotal: $${Number(order.total || 0).toFixed(2)}\nStatus: ${order.status}\n`
+      );
       if (mailResult?.skipped) {
         console.warn(
           `[email] order confirmation skipped (reason=${mailResult.reason}) order=${orderId} to=${userEmail}`

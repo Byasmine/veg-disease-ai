@@ -1,7 +1,7 @@
 const express = require('express');
 const { requireAuth } = require('../middleware/auth');
 const shop = require('../services/shopService');
-const { isSmtpConfigured } = require('../services/emailService');
+const { isEmailApiConfigured } = require('../services/emailService');
 
 const router = express.Router();
 
@@ -9,7 +9,7 @@ router.get('/health', (_req, res) => {
   res.json({
     status: 'ok',
     service: 'shop-backend',
-    smtpConfigured: isSmtpConfigured(),
+    emailApiConfigured: isEmailApiConfigured(),
   });
 });
 

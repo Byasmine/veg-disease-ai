@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const { getPool } = require('../db/pool');
 const { createOtp, verifyOtp, PURPOSE_SIGNUP, PURPOSE_PASSWORD_RESET } = require('./otpService');
-const { sendMail } = require('./emailService');
+const { sendEmail } = require('./emailService');
 const { otpEmailTemplate } = require('./emailTemplates');
 
 const SALT_ROUNDS = 10;
@@ -121,12 +121,12 @@ async function registerPendingProfile(body) {
     subtitle: 'Your signup verification code',
     note: 'Expires in 15 minutes.',
   });
-  await sendMail({
-    to: email,
-    subject: 'Activate your Leaf Doctor account',
-    text: `Your verification code is: ${code}\n\nIt expires in 15 minutes.\n\nIf you did not sign up, ignore this email.`,
+  await sendEmail(
+    email,
+    'Activate your Leaf Doctor account',
     html,
-  });
+    `Your verification code is: ${code}\n\nIt expires in 15 minutes.\n\nIf you did not sign up, ignore this email.`
+  );
 
   return { email, message: 'Check your email for a verification code to activate your account.' };
 }
@@ -185,12 +185,12 @@ async function resendSignupOtp(email) {
     subtitle: 'Signup confirmation',
     note: 'Expires in 15 minutes.',
   });
-  await sendMail({
-    to: normalized,
-    subject: 'Your Leaf Doctor verification code',
-    text: `Your verification code is: ${code}\n\nIt expires in 15 minutes.`,
+  await sendEmail(
+    normalized,
+    'Your Leaf Doctor verification code',
     html,
-  });
+    `Your verification code is: ${code}\n\nIt expires in 15 minutes.`
+  );
   return { message: 'A new code was sent to your email.' };
 }
 
@@ -247,12 +247,12 @@ async function requestPasswordReset(email) {
     subtitle: 'Your password reset code',
     note: 'Expires in 15 minutes.',
   });
-  await sendMail({
-    to: normalized,
-    subject: 'Reset your Leaf Doctor password',
-    text: `Your password reset code is: ${code}\n\nIt expires in 15 minutes.\n\nIf you did not request this, ignore this email.`,
+  await sendEmail(
+    normalized,
+    'Reset your Leaf Doctor password',
     html,
-  });
+    `Your password reset code is: ${code}\n\nIt expires in 15 minutes.\n\nIf you did not request this, ignore this email.`
+  );
   return { message: 'If an account exists for this email, a reset code was sent.' };
 }
 

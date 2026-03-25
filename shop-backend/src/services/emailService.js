@@ -1,50 +1,112 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
-function getTransport() {
-  if (!process.env.SMTP_HOST) return null;
-  const port = Number(process.env.SMTP_PORT || 587);
-  // Port 465 = TLS from first byte (secure: true). Port 587 = plain then STARTTLS (secure: false).
-  let secure = process.env.SMTP_SECURE === 'true';
-  if (secure && port === 587) {
-    console.warn(
-      '[email] SMTP_SECURE=true is incompatible with port 587; using STARTTLS (secure=false). For implicit TLS use port 465.'
-    );
-    secure = false;
+function getResendClient() {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey || !String(apiKey).trim()) return null;
+  return new Resend(apiKey);
+}
+
+/**
+ * True when RESEND_API_KEY is set.
+ * Note: This does not guarantee delivery; it only indicates the API client can be created.
+ */
+function isResendConfigured() {
+  return getResendClient() != null;
+}
+
+function isEmailApiConfigured() {
+  const hasResend = isResendConfigured();
+  const hasSendGrid = !!(process.env.SENDGRID_API_KEY && String(process.env.SENDGRID_API_KEY).trim());
+  return hasResend || hasSendGrid;
+}
+
+function extractEmail(from) {
+  const s = String(from || '').trim();
+  const match = s.match(/<([^>]+)>/);
+  return (match ? match[1] : s).trim();
+}
+
+async function sendViaSendGrid(to, subject, html, text) {
+  const apiKey = process.env.SENDGRID_API_KEY;
+  if (!apiKey || !String(apiKey).trim()) {
+    throw new Error('SendGrid not configured (missing SENDGRID_API_KEY)');
   }
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port,
-    secure,
-    requireTLS: !secure && port === 587,
-    auth:
-      process.env.SMTP_USER != null && process.env.SMTP_USER !== ''
-        ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS || '' }
-        : undefined,
-  });
-}
 
-/** True when SMTP_HOST is set (Railway health check; does not verify login or delivery). */
-function isSmtpConfigured() {
-  return getTransport() != null;
-}
-
-async function sendMail({ to, subject, text, html }) {
   const from = process.env.EMAIL_FROM || 'Leaf Doctor <noreply@leafdoctor.local>';
-  const transport = getTransport();
-  if (!transport) {
-    console.warn(
-      `[email] SMTP not configured (set SMTP_HOST on the server); skipping send to=${to} subject=${subject}`
-    );
-    console.warn('[email] dev fallback — message body below');
-    console.warn(text || html || '');
-    return { skipped: true, reason: 'smtp_not_configured' };
+  const fromEmail = extractEmail(from);
+  if (!fromEmail) throw new Error('Missing valid EMAIL_FROM for SendGrid');
+
+  const content = [
+    { type: 'text/html', value: html },
+    ...(text ? [{ type: 'text/plain', value: text }] : []),
+  ];
+
+  const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      personalizations: [{ to: [{ email: to }] }],
+      from: { email: fromEmail },
+      subject,
+      content,
+    }),
+  });
+
+  const bodyText = await response.text();
+  if (!response.ok) {
+    throw new Error(`SendGrid failed status=${response.status} body=${bodyText.slice(0, 500)}`);
   }
-  const info = await transport.sendMail({ from, to, subject, text, html });
-  const messageId = info?.messageId ?? 'unknown';
-  console.log(
-    `[email] SMTP accepted message messageId=${messageId} to=${to} subject=${String(subject).slice(0, 80)}`
-  );
-  return { skipped: false, info };
+
+  return { provider: 'sendgrid', raw: bodyText };
 }
 
-module.exports = { sendMail, isSmtpConfigured };
+/**
+ * HTTPS email sending via Resend.
+ * @param {string} to
+ * @param {string} subject
+ * @param {string} html
+ * @param {string=} text Optional plain text fallback
+ */
+async function sendEmail(to, subject, html, text) {
+  const resend = getResendClient();
+  const from = process.env.EMAIL_FROM || 'Leaf Doctor <noreply@leafdoctor.local>';
+
+  const canSendViaSendGrid = !!(process.env.SENDGRID_API_KEY && String(process.env.SENDGRID_API_KEY).trim());
+
+  if (resend) {
+    try {
+      const payload = {
+        from,
+        to,
+        subject,
+        html,
+      };
+      if (text) payload.text = text;
+
+      const response = await resend.emails.send(payload);
+      const id = response?.id ?? response?.messageId ?? 'unknown';
+      console.info(`[email] Resend accepted message id=${id} to=${to} subject=${String(subject).slice(0, 80)}`);
+      return response;
+    } catch (e) {
+      console.error(
+        `[email] Resend send failed to=${to} subject=${String(subject).slice(0, 80)}: ${e?.message || String(e)}`
+      );
+      if (!canSendViaSendGrid) throw e;
+      console.warn('[email] falling back to SendGrid...');
+    }
+  } else if (!canSendViaSendGrid) {
+    console.warn(
+      `[email] Email provider not configured (set RESEND_API_KEY and/or SENDGRID_API_KEY); skipping send to=${to} subject=${subject}`
+    );
+    if (text || html) console.warn(text || html);
+    return { skipped: true, reason: 'email_provider_not_configured' };
+  }
+
+  // Fallback (either Resend not configured, or it failed)
+  return await sendViaSendGrid(to, subject, html, text);
+}
+
+module.exports = { sendEmail, isResendConfigured, isEmailApiConfigured };
