@@ -1,9 +1,20 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, {
+  FadeIn,
+  FadeInDown,
+  SlideInDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { useNavigation } from '@react-navigation/native';
 import { colors } from '../theme/colors';
 
@@ -20,12 +31,21 @@ function MenuButton({
   onPress: () => void;
   delay: number;
 }) {
+  const scale = useSharedValue(1);
+  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
   return (
     <AnimatedTouchable
       entering={FadeInDown.delay(delay).springify().damping(14)}
-      style={styles.menuBtn}
+      style={[styles.menuBtn, animatedStyle]}
       onPress={onPress}
-      activeOpacity={0.9}
+      onPressIn={() => {
+        scale.value = withSpring(0.98);
+      }}
+      onPressOut={() => {
+        scale.value = withSpring(1);
+      }}
+      activeOpacity={1}
     >
       <View style={styles.menuBtnInner}>
         <View style={styles.menuIconWrap}>
@@ -40,14 +60,40 @@ function MenuButton({
 
 export function HomeHubScreen() {
   const navigation = useNavigation();
+  const logoScale = useSharedValue(0.8);
+  const logoOpacity = useSharedValue(0);
+  const pulse = useSharedValue(0);
+
+  useEffect(() => {
+    logoOpacity.value = withTiming(1, { duration: 600 });
+    logoScale.value = withSpring(1, { damping: 14 });
+    pulse.value = withDelay(
+      800,
+      withRepeat(
+        withSequence(withTiming(1, { duration: 1200 }), withTiming(0, { duration: 1200 })),
+        -1,
+        true
+      )
+    );
+  }, [logoOpacity, logoScale, pulse]);
+
+  const pulseStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 + pulse.value * 0.06 }],
+    opacity: 0.14 + pulse.value * 0.12,
+  }));
+  const logoAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: logoOpacity.value,
+    transform: [{ scale: logoScale.value * (1 + pulse.value * 0.05) }],
+  }));
 
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
       <LinearGradient colors={[colors.olive, '#5E6539', '#4a5228']} style={StyleSheet.absoluteFill} />
+      <Animated.View style={[styles.pulseOrb, pulseStyle]} />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Animated.View entering={FadeIn.duration(500)} style={styles.logoWrap}>
+        <Animated.View entering={FadeIn.duration(500)} style={[styles.logoWrap, logoAnimatedStyle]}>
           <View style={styles.logoCircle}>
             <Ionicons name="leaf" size={56} color={colors.textOnOlive} />
           </View>
@@ -57,35 +103,21 @@ export function HomeHubScreen() {
 
         <View style={styles.menu}>
           <MenuButton
-            icon="scan-outline"
-            label="Analyze"
-            onPress={() => (navigation as any).navigate('Analyze')}
-            delay={160}
-          />
-          <MenuButton
-            icon="time-outline"
-            label="History"
-            onPress={() => (navigation as any).navigate('Analyze', { screen: 'History' })}
-            delay={220}
-          />
-          <MenuButton
-            icon="storefront-outline"
-            label="Shop"
-            onPress={() => (navigation as any).navigate('Shop')}
-            delay={280}
-          />
-          <MenuButton
             icon="help-circle-outline"
-            label="Help"
+            label="Info"
             onPress={() => (navigation as any).getParent()?.navigate('Help')}
-            delay={460}
+            delay={160}
           />
           <MenuButton
             icon="information-circle-outline"
             label="About"
             onPress={() => (navigation as any).getParent()?.navigate('About')}
-            delay={520}
+            delay={220}
           />
+          <Animated.View entering={SlideInDown.delay(300).duration(500)} style={styles.proHint}>
+            <Ionicons name="sparkles-outline" size={18} color={colors.textOnOlive} />
+            <Text style={styles.proHintText}>Professional assistant for plant diagnostics and guidance.</Text>
+          </Animated.View>
         </View>
       </ScrollView>
     </View>
@@ -94,6 +126,15 @@ export function HomeHubScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  pulseOrb: {
+    position: 'absolute',
+    width: 320,
+    height: 320,
+    borderRadius: 160,
+    backgroundColor: '#dce8b2',
+    top: -70,
+    right: -70,
+  },
   content: {
     flexGrow: 1,
     justifyContent: 'center',
@@ -129,6 +170,24 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   menu: { width: '100%', maxWidth: 330, gap: 12, paddingBottom: 16 },
+  proHint: {
+    marginTop: 10,
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.28)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  proHintText: {
+    flex: 1,
+    color: colors.textOnOlive,
+    fontSize: 13,
+    lineHeight: 18,
+  },
   menuBtn: {
     backgroundColor: colors.card,
     borderRadius: 16,

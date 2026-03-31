@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { createNativeStackNavigator, type NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useSidebar } from '../context/SidebarContext';
-import { WelcomeScreen } from '../screens/WelcomeScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { ResultScreen } from '../screens/ResultScreen';
 import { FeedbackScreen } from '../screens/FeedbackScreen';
@@ -34,12 +33,12 @@ const headerStyles = StyleSheet.create({
   title: { color: colors.textOnOlive, fontWeight: '600', fontSize: 18 },
   headerRight: { marginRight: 16 },
   headerLeft: { marginLeft: 8 },
+  headerLeftRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
 });
 
 export type RootStackParamList = {
   MainTabs: undefined;
   Auth: undefined;
-  Welcome: undefined;
   Home: undefined;
   Result: { imageUri: string; result: PredictionResponse };
   Feedback: {
@@ -63,10 +62,14 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 type RootProps<T extends keyof RootStackParamList> = NativeStackScreenProps<RootStackParamList, T>;
 
-function MenuButton() {
+function MenuButton({ placement = 'right' }: { placement?: 'left' | 'right' }) {
   const { openSidebar } = useSidebar();
   return (
-    <TouchableOpacity onPress={openSidebar} style={headerStyles.headerRight} hitSlop={12}>
+    <TouchableOpacity
+      onPress={openSidebar}
+      style={placement === 'left' ? headerStyles.headerLeft : headerStyles.headerRight}
+      hitSlop={12}
+    >
       <Ionicons name="menu-outline" size={24} color={colors.textOnOlive} />
     </TouchableOpacity>
   );
@@ -85,7 +88,6 @@ export function RootNavigator() {
     >
       <Stack.Screen name="MainTabs" component={MainTabNavigator} options={{ headerShown: false }} />
       <Stack.Screen name="Auth" component={AuthScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="Welcome" component={WelcomeScreen} options={{ headerShown: false }} />
       <Stack.Screen
         name="Home"
         component={HomeScreen as ComponentType<RootProps<'Home'>>}
@@ -171,13 +173,16 @@ export function RootNavigator() {
         component={ShopScreen}
         options={({ navigation }) => ({
           headerTitle: () => <HeaderTitle icon="storefront" title="Shop" />,
-          headerLeft: () =>
-            navigation.canGoBack() ? (
-              <TouchableOpacity onPress={() => navigation.goBack()} style={headerStyles.headerLeft} hitSlop={12}>
-                <Ionicons name="arrow-back" size={24} color={colors.textOnOlive} />
-              </TouchableOpacity>
-            ) : null,
-          headerRight: () => <MenuButton />,
+          headerLeft: () => (
+            <View style={headerStyles.headerLeftRow}>
+              {navigation.canGoBack() ? (
+                <TouchableOpacity onPress={() => navigation.goBack()} style={headerStyles.headerLeft} hitSlop={12}>
+                  <Ionicons name="arrow-back" size={24} color={colors.textOnOlive} />
+                </TouchableOpacity>
+              ) : null}
+              <MenuButton placement="left" />
+            </View>
+          ),
         })}
       />
       <Stack.Screen
@@ -185,13 +190,16 @@ export function RootNavigator() {
         component={CartScreen}
         options={({ navigation }) => ({
           headerTitle: () => <HeaderTitle icon="cart" title="Cart" />,
-          headerLeft: () =>
-            navigation.canGoBack() ? (
-              <TouchableOpacity onPress={() => navigation.goBack()} style={headerStyles.headerLeft} hitSlop={12}>
-                <Ionicons name="arrow-back" size={24} color={colors.textOnOlive} />
-              </TouchableOpacity>
-            ) : null,
-          headerRight: () => <MenuButton />,
+          headerLeft: () => (
+            <View style={headerStyles.headerLeftRow}>
+              {navigation.canGoBack() ? (
+                <TouchableOpacity onPress={() => navigation.goBack()} style={headerStyles.headerLeft} hitSlop={12}>
+                  <Ionicons name="arrow-back" size={24} color={colors.textOnOlive} />
+                </TouchableOpacity>
+              ) : null}
+              <MenuButton placement="left" />
+            </View>
+          ),
         })}
       />
       <Stack.Screen

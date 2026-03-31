@@ -32,7 +32,6 @@ interface SidebarItem {
 }
 
 const ITEMS: SidebarItem[] = [
-  { icon: 'home-outline', label: 'Welcome', route: 'Welcome' },
   { icon: 'scan-outline', label: 'Analyze', route: 'Home' },
   { icon: 'storefront-outline', label: 'Shop', route: 'Shop' },
   { icon: 'cart-outline', label: 'Cart', route: 'Cart' },
@@ -74,8 +73,6 @@ export function Sidebar() {
     }
     if (item.route === 'Home') {
       navigateRoot('Home');
-    } else if (item.route === 'Welcome') {
-      navigateRoot('Welcome');
     } else {
       navigateRoot(item.route as string, item.params);
     }

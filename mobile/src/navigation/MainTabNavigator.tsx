@@ -133,7 +133,7 @@ function AnalyzeStackNavigator() {
         headerTintColor: colors.textOnOlive,
         headerTitleStyle: { fontWeight: '600', fontSize: 18 },
         contentStyle: { backgroundColor: colors.cream },
-        headerRight: () => <HeaderMenuButton />,
+        headerLeft: () => <HeaderMenuButton />,
       }}
     >
       <AnalyzeStack.Screen
@@ -142,7 +142,7 @@ function AnalyzeStackNavigator() {
         options={({ navigation }) => ({
           headerTitle: () => <HeaderTitleWithIcon icon="scan-outline" title="Plant Health Scanner" />,
           headerRight: () => (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <TouchableOpacity
                 onPress={() => navigation.navigate('History')}
                 hitSlop={10}
@@ -153,7 +153,6 @@ function AnalyzeStackNavigator() {
               >
                 <Ionicons name="time-outline" size={22} color={colors.textOnOlive} />
               </TouchableOpacity>
-              <HeaderMenuButton />
             </View>
           ),
         })}
@@ -181,13 +180,26 @@ function ShopStackNavigator() {
   return (
     <ShopStack.Navigator
       initialRouteName="ShopHome"
-      screenOptions={{
+      screenOptions={({ navigation }) => ({
         headerStyle: { backgroundColor: colors.olive },
         headerTintColor: colors.textOnOlive,
         headerTitleStyle: { fontWeight: '600', fontSize: 18 },
         contentStyle: { backgroundColor: colors.cream },
-        headerRight: () => <HeaderMenuButton />,
-      }}
+        headerLeft: () =>
+          navigation.canGoBack() ? (
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              hitSlop={12}
+              style={{ paddingHorizontal: 12 }}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
+              <Ionicons name="arrow-back" size={24} color={colors.textOnOlive} />
+            </TouchableOpacity>
+          ) : (
+            <HeaderMenuButton />
+          ),
+      })}
     >
       <ShopStack.Screen name="ShopHome" component={ShopHomeScreen} options={{ headerShown: false }} />
       <ShopStack.Screen
@@ -225,7 +237,7 @@ function OrdersStackNavigator() {
         headerTintColor: colors.textOnOlive,
         headerTitleStyle: { fontWeight: '600', fontSize: 18 },
         contentStyle: { backgroundColor: colors.cream },
-        headerRight: () => <HeaderMenuButton />,
+        headerLeft: () => <HeaderMenuButton />,
       }}
     >
       <OrdersStack.Screen
@@ -246,7 +258,7 @@ function ProfileStackNavigator() {
         headerTintColor: colors.textOnOlive,
         headerTitleStyle: { fontWeight: '600', fontSize: 18 },
         contentStyle: { backgroundColor: colors.cream },
-        headerRight: () => <HeaderMenuButton />,
+        headerLeft: () => <HeaderMenuButton />,
       }}
     >
       <ProfileStack.Screen
@@ -273,7 +285,7 @@ const tabIconMap: Record<keyof MainTabParamList, keyof typeof Ionicons.glyphMap>
 export function MainTabNavigator() {
   return (
     <Tab.Navigator
-      initialRouteName="Shop"
+      initialRouteName="HomeHub"
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: colors.olive,

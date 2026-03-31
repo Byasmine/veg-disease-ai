@@ -9,10 +9,8 @@ function resolveUrl(rawValue, fallback) {
   return raw.startsWith('http://') || raw.startsWith('https://') ? raw : `https://${raw}`;
 }
 
-// const apiUrl = resolveUrl(process.env.EXPO_PUBLIC_API_URL, 'https://veg-disease-ai-production.up.railway.app');
+const apiUrl = resolveUrl(process.env.EXPO_PUBLIC_API_URL, 'https://veg-disease-ai-production.up.railway.app');
 const shopApiUrl = resolveUrl(process.env.EXPO_PUBLIC_SHOP_API_URL, 'https://shop-backend-agilicis-leafdoctor.up.railway.app');
-
-const apiUrl = resolveUrl(process.env.EXPO_PUBLIC_API_URL, 'http://192.168.1.100:8000');
 
 const { expo } = require('./app.json');
 
