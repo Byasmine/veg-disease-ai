@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react'; //hook pour gerer le state (ouvert ou ferme) de la sidebar
 
 type SidebarContextType = {
   isOpen: boolean;

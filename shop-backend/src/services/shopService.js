@@ -31,7 +31,7 @@ async function getCategories() {
   return rows.map(mapCategoryRow);
 }
 
-async function getProducts({ categoryId, q } = {}) {
+async function getProducts({ categoryId, q, minPrice, maxPrice, inStock, sort = 'name_asc', limit, offset } = {}) {
   const pool = getPool();
   let sql = `SELECT id, category_id, name, description, price, stock, currency, image_url FROM products WHERE 1=1`;
   const params = [];
@@ -43,7 +43,39 @@ async function getProducts({ categoryId, q } = {}) {
     params.push(`%${String(q).toLowerCase()}%`);
     sql += ` AND (LOWER(name) LIKE $${params.length} OR LOWER(COALESCE(description,'')) LIKE $${params.length})`;
   }
-  sql += ` ORDER BY name ASC`;
+  if (Number.isFinite(Number(minPrice))) {
+    params.push(Number(minPrice));
+    sql += ` AND price >= $${params.length}`;
+  }
+  if (Number.isFinite(Number(maxPrice))) {
+    params.push(Number(maxPrice));
+    sql += ` AND price <= $${params.length}`;
+  }
+  if (String(inStock).toLowerCase() === 'true') {
+    sql += ` AND stock > 0`;
+  }
+
+  const sortMap = {
+    name_asc: 'name ASC',
+    name_desc: 'name DESC',
+    price_asc: 'price ASC, name ASC',
+    price_desc: 'price DESC, name ASC',
+    newest: 'id DESC',
+  };
+  const orderBy = sortMap[sort] || sortMap.name_asc;
+  sql += ` ORDER BY ${orderBy}`;
+
+  const lim = Number(limit);
+  const off = Number(offset);
+  if (Number.isFinite(lim) && lim > 0) {
+    params.push(Math.min(lim, 100));
+    sql += ` LIMIT $${params.length}`;
+  }
+  if (Number.isFinite(off) && off >= 0) {
+    params.push(off);
+    sql += ` OFFSET $${params.length}`;
+  }
+
   const { rows } = await pool.query(sql, params);
   return rows.map(mapProductRow);
 }

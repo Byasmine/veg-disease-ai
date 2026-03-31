@@ -44,3 +44,19 @@ def log_review_decision(case_id: str, action: str, corrected_label: str | None =
         logger.info(msg[0] + " | corrected_label=%s", *(msg[1:] + (corrected_label,)))
     else:
         logger.info(*msg)
+
+
+def log_decision(
+    prediction: str,
+    model_confidence: float,
+    fused_score: float,
+    final_status: str,
+) -> None:
+    """Log fusion decision output from orchestrator."""
+    logger.info(
+        "decision | prediction=%s | model_confidence=%.4f | fused_score=%.4f | final_status=%s",
+        prediction,
+        model_confidence,
+        fused_score,
+        final_status,
+    )

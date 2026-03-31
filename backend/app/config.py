@@ -3,14 +3,30 @@
 import os
 
 # Model identity (bump when you deploy a new model)
-MODEL_VERSION = "1.0.0"
+MODEL_VERSION = os.getenv("MODEL_VERSION", "1.0.0")
+MODEL_FILENAME = os.getenv("MODEL_FILENAME", "model_v1.onnx")
 
 # Confidence thresholds for status
 # confidence >= HIGH  -> Success
 # LOW <= confidence < HIGH -> Uncertain (recommend human review)
 # confidence < LOW or error -> Failure
-CONFIDENCE_THRESHOLD_HIGH = 0.85
-CONFIDENCE_THRESHOLD_LOW = 0.50
+CONFIDENCE_THRESHOLD_HIGH = float(os.getenv("CONFIDENCE_THRESHOLD_HIGH", "0.85"))
+CONFIDENCE_THRESHOLD_LOW = float(os.getenv("CONFIDENCE_THRESHOLD_LOW", "0.50"))
+
+# Workflow decision thresholds for product operation states:
+# ACCEPTED, REVIEW, REJECTED
+WORKFLOW_ACCEPT_MIN_SCORE = float(os.getenv("WORKFLOW_ACCEPT_MIN_SCORE", "0.75"))
+WORKFLOW_REVIEW_MIN_SCORE = float(os.getenv("WORKFLOW_REVIEW_MIN_SCORE", "0.45"))
+WORKFLOW_REJECT_MAX_MODEL_CONFIDENCE = float(os.getenv("WORKFLOW_REJECT_MAX_MODEL_CONFIDENCE", "0.35"))
+
+# Uncertainty signals (used by orchestration)
+UNCERTAINTY_MARGIN_THRESHOLD = float(os.getenv("UNCERTAINTY_MARGIN_THRESHOLD", "0.15"))
+UNCERTAINTY_ENTROPY_THRESHOLD = float(os.getenv("UNCERTAINTY_ENTROPY_THRESHOLD", "0.50"))
+
+# Fusion weights (sum should be 1.0)
+FUSION_WEIGHT_MODEL = float(os.getenv("FUSION_WEIGHT_MODEL", "0.60"))
+FUSION_WEIGHT_RULE = float(os.getenv("FUSION_WEIGHT_RULE", "0.25"))
+FUSION_WEIGHT_LLM = float(os.getenv("FUSION_WEIGHT_LLM", "0.15"))
 
 # Top-K predictions to return
 TOP_K_DEFAULT = 3

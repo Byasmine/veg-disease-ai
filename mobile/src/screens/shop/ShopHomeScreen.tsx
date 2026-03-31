@@ -30,6 +30,7 @@ import { showErrorToast } from '../../utils/showApiError';
 
 type Props = { navigation: NativeStackNavigationProp<ShopStackParamList, 'ShopHome'> };
 type PriceBand = 'all' | 'under10' | '10to20' | 'above20';
+type SortOption = 'name_asc' | 'price_asc' | 'price_desc';
 
 const PRICE_OPTIONS: { key: PriceBand; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -39,13 +40,7 @@ const PRICE_OPTIONS: { key: PriceBand; label: string }[] = [
 ];
 
 const H_PAD = 20;
-
-function matchesPrice(price: number, band: PriceBand): boolean {
-  if (band === 'under10') return price < 10;
-  if (band === '10to20') return price >= 10 && price <= 20;
-  if (band === 'above20') return price > 20;
-  return true;
-}
+const PAGE_SIZE = 12;
 
 function categoryNameForId(categories: ShopCategory[], id: string): string {
   return categories.find((c) => c.id === id)?.name ?? 'Product';
@@ -58,30 +53,86 @@ export function ShopHomeScreen({ navigation }: Props) {
   const [products, setProducts] = useState<ShopProduct[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedPrice, setSelectedPrice] = useState<PriceBand>('all');
+  const [selectedSort, setSelectedSort] = useState<SortOption>('name_asc');
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [offset, setOffset] = useState(0);
   const [addingId, setAddingId] = useState<string | null>(null);
   const [cartCount, setCartCount] = useState(0);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const loadCategories = useCallback(async () => {
     try {
-      const [cats, prods] = await Promise.all([getShopCategories(), getShopProducts()]);
+      const cats = await getShopCategories();
       setCategories(cats);
-      setProducts(prods);
     } catch (e) {
-      showErrorToast(e, { title: 'Shop unavailable', fallback: 'Could not load shop data.' });
-    } finally {
-      setLoading(false);
+      showErrorToast(e, { title: 'Shop unavailable', fallback: 'Could not load categories.' });
     }
   }, []);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  const loadProducts = useCallback(async (reset = true, currentOffset = 0) => {
+    if (reset) setLoading(true);
+    else setLoadingMore(true);
+    try {
+      const priceFilter =
+        selectedPrice === 'under10'
+          ? { maxPrice: 10 }
+          : selectedPrice === '10to20'
+            ? { minPrice: 10, maxPrice: 20 }
+            : selectedPrice === 'above20'
+              ? { minPrice: 20.01 }
+              : {};
+      const queryOffset = reset ? 0 : currentOffset;
+      const prods = await getShopProducts({
+        categoryId: selectedCategory === 'all' ? undefined : selectedCategory,
+        q: debouncedQuery || undefined,
+        sort: selectedSort,
+        limit: PAGE_SIZE,
+        offset: queryOffset,
+        ...priceFilter,
+      });
+      setHasMore(prods.length === PAGE_SIZE);
+      setOffset(queryOffset + prods.length);
+      if (reset) {
+        setProducts(prods);
+      } else {
+        setProducts((prev) => {
+          const map = new Map(prev.map((p) => [p.id, p]));
+          for (const p of prods) map.set(p.id, p);
+          return Array.from(map.values());
+        });
+      }
+    } catch (e) {
+      showErrorToast(e, { title: 'Shop unavailable', fallback: 'Could not load products.' });
+    } finally {
+      if (reset) setLoading(false);
+      else setLoadingMore(false);
+    }
+  }, [selectedCategory, selectedPrice, selectedSort, debouncedQuery]);
 
-  // Cart badge count (refresh when screen comes into focus).
+  useEffect(() => {
+    loadCategories();
+  }, [loadCategories]);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query.trim()), 300);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  useEffect(() => {
+    setOffset(0);
+    setHasMore(true);
+    loadProducts(true, 0);
+  }, [loadProducts]);
+
+  const loadMore = async () => {
+    if (loading || loadingMore || !hasMore) return;
+    await loadProducts(false, offset);
+  };
+
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
@@ -103,22 +154,13 @@ export function ShopHomeScreen({ navigation }: Props) {
     }, [user?.id])
   );
 
-  const filteredProducts = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return products.filter((p) => {
-      const categoryOk = selectedCategory === 'all' || p.categoryId === selectedCategory;
-      const priceOk = matchesPrice(p.price, selectedPrice);
-      const queryOk = !q || `${p.name} ${p.description ?? ''}`.toLowerCase().includes(q);
-      return categoryOk && priceOk && queryOk;
-    });
-  }, [products, selectedCategory, selectedPrice, query]);
-
   const hasActiveFilters =
     selectedCategory !== 'all' || selectedPrice !== 'all' || query.trim().length > 0;
 
   const resetFilters = () => {
     setSelectedCategory('all');
     setSelectedPrice('all');
+    setSelectedSort('name_asc');
     setQuery('');
   };
 
@@ -242,6 +284,12 @@ export function ShopHomeScreen({ navigation }: Props) {
               <Text style={styles.filterBarText}>Filters</Text>
               {hasActiveFilters ? <View style={styles.filterBarDot} /> : null}
             </TouchableOpacity>
+            <TouchableOpacity style={styles.filterBarBtn} onPress={() => setSelectedSort((s) => (s === 'name_asc' ? 'price_asc' : s === 'price_asc' ? 'price_desc' : 'name_asc'))} activeOpacity={0.9}>
+              <Ionicons name="swap-vertical-outline" size={18} color={colors.olive} />
+              <Text style={styles.filterBarText}>
+                {selectedSort === 'name_asc' ? 'Name' : selectedSort === 'price_asc' ? 'Price ↑' : 'Price ↓'}
+              </Text>
+            </TouchableOpacity>
             {hasActiveFilters ? (
               <TouchableOpacity onPress={resetFilters} style={styles.filterBarClear} activeOpacity={0.9}>
                 <Text style={styles.filterBarClearText}>Clear</Text>
@@ -257,7 +305,7 @@ export function ShopHomeScreen({ navigation }: Props) {
             <Text style={styles.catalogMeta}>
               {loading
                 ? 'Loading…'
-                : `${filteredProducts.length} ${filteredProducts.length === 1 ? 'item' : 'items'} · Leaf Doctor store`}
+                : `${products.length} ${products.length === 1 ? 'item' : 'items'} loaded`}
             </Text>
           </View>
         </View>
@@ -271,7 +319,7 @@ export function ShopHomeScreen({ navigation }: Props) {
 
         {!loading ? (
           <FlatList
-            data={filteredProducts}
+            data={products}
             keyExtractor={(product) => product.id}
             scrollEnabled={false}
             renderItem={({ item: product, index }) => (
@@ -303,6 +351,31 @@ export function ShopHomeScreen({ navigation }: Props) {
                   ) : null}
                 </GlassCard>
               </Animated.View>
+            }
+            ListFooterComponent={
+              products.length > 0 ? (
+                <View style={styles.listFooter}>
+                  {hasMore ? (
+                    <TouchableOpacity
+                      onPress={loadMore}
+                      style={styles.loadMoreBtn}
+                      activeOpacity={0.9}
+                      disabled={loadingMore}
+                    >
+                      {loadingMore ? (
+                        <ActivityIndicator size="small" color={colors.textOnOlive} />
+                      ) : (
+                        <>
+                          <Ionicons name="chevron-down-outline" size={18} color={colors.textOnOlive} />
+                          <Text style={styles.loadMoreBtnText}>Load more products</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  ) : (
+                    <Text style={styles.endListText}>You reached the end of the catalog.</Text>
+                  )}
+                </View>
+              ) : null
             }
           />
         ) : null}
@@ -450,7 +523,7 @@ const styles = StyleSheet.create({
   byAgilicis: {
     fontSize: 20,
     fontWeight: '700',
-    color: colors.creamMuted,
+    color: colors.textOnOlive,
     letterSpacing: 0.2,
     flexShrink: 1,
   },
@@ -720,4 +793,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   footerLinkText: { color: colors.olive, fontWeight: '700', fontSize: 15 },
+  listFooter: { alignItems: 'center', paddingTop: 6, paddingBottom: 8 },
+  loadMoreBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.olive,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+  },
+  loadMoreBtnText: { color: colors.textOnOlive, fontWeight: '800', fontSize: 13 },
+  endListText: { color: colors.textSecondary, fontWeight: '600', fontSize: 12 },
 });

@@ -32,7 +32,18 @@ export async function getShopCategories(): Promise<ShopCategory[]> {
   return Array.isArray(data) ? data : [];
 }
 
-export async function getShopProducts(params?: { categoryId?: string; q?: string }): Promise<ShopProduct[]> {
+export type ShopProductsQuery = {
+  categoryId?: string;
+  q?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  inStock?: boolean;
+  sort?: 'name_asc' | 'name_desc' | 'price_asc' | 'price_desc' | 'newest';
+  limit?: number;
+  offset?: number;
+};
+
+export async function getShopProducts(params?: ShopProductsQuery): Promise<ShopProduct[]> {
   const { data } = await shopClient.get<ShopProduct[]>('/products', { params });
   return Array.isArray(data) ? data : [];
 }

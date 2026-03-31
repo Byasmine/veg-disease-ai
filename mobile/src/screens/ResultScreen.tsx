@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Image, StyleSheet, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { GlassCard } from '../components/GlassCard';
 import { ConfidenceBar } from '../components/ConfidenceBar';
@@ -22,9 +23,11 @@ import {
 } from '../components/Icons';
 import { TreatmentSolutions } from '../components/TreatmentSolutions';
 import { generateAndShareReportPdf } from '../services/reportPdf';
+import { addShopCartItem, getShopProducts } from '../services/shopApi';
+import type { ShopProduct } from '../types/shop';
 import Toast from 'react-native-toast-message';
 import type { AnalyzeStackParamList } from '../navigation/analyzeStackTypes';
-import type { PredictionResponse } from '../types/api';
+import type { PredictionResponse, RecommendedProductHint } from '../types/api';
 
 type ConfidenceLevel = 'High' | 'Moderate' | 'Low';
 
@@ -58,11 +61,46 @@ function formatLabel(s: string): string {
   return s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+type MatchedRecommendation = {
+  product: ShopProduct;
+  hint: RecommendedProductHint;
+  score: number;
+};
+
+function tokenize(text: string): string[] {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((t) => t.length > 2);
+}
+
+function scoreProductAgainstHint(product: ShopProduct, hint: RecommendedProductHint): number {
+  const haystack = `${product.name} ${product.description ?? ''}`.toLowerCase();
+  const hintNameTokens = tokenize(hint.name);
+  const queryTokens = tokenize(hint.shop_query);
+  let score = 0;
+
+  for (const t of hintNameTokens) {
+    if (haystack.includes(t)) score += 3;
+  }
+  for (const t of queryTokens) {
+    if (haystack.includes(t)) score += 2;
+  }
+  if (haystack.includes(hint.shop_query.toLowerCase())) score += 4;
+  if (product.stock > 0) score += 1;
+  // Mildly prefer affordable options when relevance is similar.
+  score += Math.max(0, 1 - product.price / 100);
+
+  return score;
+}
+
 export function ResultScreen({ route, navigation }: Props) {
   const { imageUri, result } = route.params ?? {};
   const dr = result?.diagnostic_report ?? {};
   const llm = result?.llm_reasoning;
   const agent = result?.agent_decision ?? {};
+  const workflowDecision = result?.decision?.workflow_decision;
   const top3 = (result?.top_k ?? []).slice(0, 3);
 
   const fallbackReason = [dr.summary, agent.reason].filter(Boolean).join(' ').trim();
@@ -96,8 +134,95 @@ export function ResultScreen({ route, navigation }: Props) {
   const { level: confidenceLevel, color: confidenceLevelColor } = getConfidenceLevel(confidenceVal);
   const treatmentBullets = dr.recommended_treatment ? treatmentToBullets(dr.recommended_treatment) : [];
   const maxTopConfidence = top3.length > 0 ? Math.max(...top3.map((t) => t.confidence), 0.01) : 1;
+  const productHints = useMemo(() => result?.recommended_products ?? [], [result?.recommended_products]);
 
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [recommendationsLoading, setRecommendationsLoading] = useState(false);
+  const [recommendedMatches, setRecommendedMatches] = useState<MatchedRecommendation[]>([]);
+
+  const workflowConfig = useMemo(() => {
+    if (workflowDecision === 'ACCEPTED') {
+      return {
+        title: 'Action: Accepted',
+        text: 'Diagnosis is considered reliable. You can proceed with the suggested treatment.',
+        color: colors.success,
+        icon: 'checkmark-circle-outline' as const,
+      };
+    }
+    if (workflowDecision === 'REJECTED') {
+      return {
+        title: 'Action: Rejected',
+        text: 'The system rejected this diagnosis. Capture a clearer image before taking action.',
+        color: colors.danger,
+        icon: 'close-circle-outline' as const,
+      };
+    }
+    if (workflowDecision === 'REVIEW') {
+      return {
+        title: 'Action: Review Needed',
+        text: 'The result is uncertain. Please retake the photo or request expert validation.',
+        color: colors.warning,
+        icon: 'help-circle-outline' as const,
+      };
+    }
+    return null;
+  }, [workflowDecision]);
+
+  useEffect(() => {
+    let mounted = true;
+    if (!productHints.length) {
+      setRecommendedMatches([]);
+      return () => {
+        mounted = false;
+      };
+    }
+
+    (async () => {
+      setRecommendationsLoading(true);
+      try {
+        const batches = await Promise.all(
+          productHints.map((h) =>
+            getShopProducts({ q: h.shop_query, inStock: true, sort: 'price_asc', limit: 10 })
+          )
+        );
+        if (!mounted) return;
+        const allMatches: MatchedRecommendation[] = [];
+        for (let i = 0; i < batches.length; i++) {
+          const hint = productHints[i];
+          const group = batches[i] ?? [];
+          for (const p of group) {
+            allMatches.push({
+              product: p,
+              hint,
+              score: scoreProductAgainstHint(p, hint),
+            });
+          }
+        }
+
+        // Deduplicate by product while keeping the strongest hint match.
+        const bestByProduct = new Map<string, MatchedRecommendation>();
+        for (const m of allMatches) {
+          const prev = bestByProduct.get(m.product.id);
+          if (!prev || m.score > prev.score) bestByProduct.set(m.product.id, m);
+        }
+
+        const ranked = Array.from(bestByProduct.values())
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 4);
+
+        setRecommendedMatches(ranked);
+      } catch {
+        if (mounted) setRecommendedMatches([]);
+      } finally {
+        if (mounted) setRecommendationsLoading(false);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [productHints]);
+
   const handleDownloadReport = async () => {
     if (!result) return;
     setPdfLoading(true);
@@ -110,6 +235,25 @@ export function ResultScreen({ route, navigation }: Props) {
       Toast.show({ type: 'error', text1: 'Could not create report', text2: (e as Error)?.message });
     } finally {
       setPdfLoading(false);
+    }
+  };
+
+  const openShop = () => {
+    const parent = navigation.getParent() as any;
+    parent?.navigate('Shop');
+  };
+
+  const openProduct = (product: ShopProduct) => {
+    const parent = navigation.getParent() as any;
+    parent?.navigate('Shop', { screen: 'ProductDetails', params: { product } });
+  };
+
+  const addSuggestedToCart = async (productId: string) => {
+    try {
+      await addShopCartItem(productId, 1);
+      Toast.show({ type: 'success', text1: 'Added to cart' });
+    } catch (e) {
+      Toast.show({ type: 'error', text1: 'Could not add item', text2: (e as Error)?.message });
     }
   };
 
@@ -165,16 +309,14 @@ export function ResultScreen({ route, navigation }: Props) {
         </GlassCard>
       </Animated.View>
 
-      {result?.status === 'Uncertain' ? (
+      {workflowConfig ? (
         <Animated.View entering={FadeInDown.delay(190).springify()}>
-          <GlassCard style={StyleSheet.flatten([styles.card, styles.uncertaintyCard])}>
+          <GlassCard style={StyleSheet.flatten([styles.card, { borderWidth: 1, borderColor: workflowConfig.color + '99', backgroundColor: workflowConfig.color + '12' }])}>
             <View style={styles.uncertaintyRow}>
-              <IconWarning size={22} color={colors.warning} />
-              <Text style={styles.uncertaintyTitle}>The AI is not fully confident in this diagnosis.</Text>
+              <Ionicons name={workflowConfig.icon} size={22} color={workflowConfig.color} />
+              <Text style={styles.uncertaintyTitle}>{workflowConfig.title}</Text>
             </View>
-            <Text style={styles.uncertaintyBody}>
-              This result may overlap with other diseases. You may want to upload another image or inspect the plant more closely.
-            </Text>
+            <Text style={styles.uncertaintyBody}>{workflowConfig.text}</Text>
           </GlassCard>
         </Animated.View>
       ) : null}
@@ -233,6 +375,56 @@ export function ResultScreen({ route, navigation }: Props) {
                 delay={i * 80}
               />
             ))}
+          </GlassCard>
+        </Animated.View>
+      ) : null}
+
+      {productHints.length > 0 ? (
+        <Animated.View entering={FadeInDown.delay(320).springify()}>
+          <GlassCard style={styles.card}>
+            <View style={styles.sectionTitleRow}>
+              <Ionicons name="storefront-outline" size={18} color={colors.olive} />
+              <Text style={styles.sectionTitle}>Recommended products</Text>
+            </View>
+            <Text style={styles.shopHintText}>
+              Based on detected disease, these products may help you treat or prevent progression.
+            </Text>
+
+            {recommendationsLoading ? (
+              <ActivityIndicator color={colors.olive} style={{ marginTop: 8 }} />
+            ) : recommendedMatches.length > 0 ? (
+              <View style={styles.recommendedList}>
+                {recommendedMatches.map(({ product, hint }) => (
+                  <View key={product.id} style={styles.recommendedRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.recommendedName} numberOfLines={1}>{product.name}</Text>
+                      <Text style={styles.recommendedMeta}>${product.price.toFixed(2)} • Stock {product.stock}</Text>
+                      <Text style={styles.recommendedWhy} numberOfLines={2}>Why: {hint.reason}</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => openProduct(product)} style={styles.recommendedBtn}>
+                      <Text style={styles.recommendedBtnText}>View</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => addSuggestedToCart(product.id)} style={styles.recommendedBtnPrimary}>
+                      <Text style={styles.recommendedBtnPrimaryText}>Add</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <View style={styles.recommendedList}>
+                {productHints.slice(0, 3).map((item, index) => (
+                  <View key={`${item.shop_query}-${index}`} style={styles.fallbackHintPill}>
+                    <Text style={styles.fallbackHintName}>{item.name}</Text>
+                    <Text style={styles.fallbackHintReason} numberOfLines={2}>{item.reason}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            <TouchableOpacity onPress={openShop} style={styles.goShopBtn}>
+              <Text style={styles.goShopBtnText}>Open shop</Text>
+              <Ionicons name="arrow-forward" size={16} color={colors.olive} />
+            </TouchableOpacity>
           </GlassCard>
         </Animated.View>
       ) : null}
@@ -314,6 +506,54 @@ const styles = StyleSheet.create({
   uncertaintyTitle: { fontSize: 15, fontWeight: '600', color: colors.textPrimary, flex: 1 },
   uncertaintyBody: { fontSize: 14, color: colors.textSecondary, lineHeight: 21 },
   reasoningBody: { fontSize: 15, color: colors.textPrimary, lineHeight: 24, letterSpacing: 0.2 },
+  shopHintText: { color: colors.textSecondary, lineHeight: 20, marginBottom: 10 },
+  recommendedList: { gap: 8 },
+  recommendedRow: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    padding: 10,
+    backgroundColor: colors.card,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  recommendedName: { fontSize: 14, fontWeight: '700', color: colors.textPrimary },
+  recommendedMeta: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+  recommendedWhy: { fontSize: 12, color: colors.olive, marginTop: 4, lineHeight: 16 },
+  recommendedBtn: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  recommendedBtnText: { color: colors.textPrimary, fontWeight: '600', fontSize: 12 },
+  recommendedBtnPrimary: {
+    borderRadius: 8,
+    backgroundColor: colors.olive,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  recommendedBtnPrimaryText: { color: colors.textOnOlive, fontWeight: '700', fontSize: 12 },
+  fallbackHintPill: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    padding: 10,
+    backgroundColor: colors.card,
+  },
+  fallbackHintName: { fontSize: 13, fontWeight: '700', color: colors.textPrimary, marginBottom: 4 },
+  fallbackHintReason: { fontSize: 12, color: colors.textSecondary, lineHeight: 17 },
+  goShopBtn: {
+    marginTop: 12,
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+  },
+  goShopBtnText: { color: colors.olive, fontWeight: '700' },
   bulletList: { marginBottom: 4 },
   bulletItem: { fontSize: 15, color: colors.textPrimary, lineHeight: 24, marginBottom: 6 },
   feedbackSection: { marginBottom: 24 },

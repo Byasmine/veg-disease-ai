@@ -4,9 +4,8 @@ from pathlib import Path
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from PIL import Image
 
-from app.config import MODEL_VERSION, REASONING_ENABLED
-from app.services.inference import predict
-from app.services.reasoning_agent import reason
+from app.config import MODEL_VERSION
+from app.services.decision_orchestrator import run_prediction
 
 router = APIRouter()
 
@@ -25,8 +24,7 @@ async def get_labels():
 ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
 
-@router.post("/predict")
-async def predict_disease(file: UploadFile = File(...)):
+def _decode_upload_image(file: UploadFile) -> Image.Image:
     if file.content_type and file.content_type not in ALLOWED_CONTENT_TYPES:
         raise HTTPException(
             status_code=422,
@@ -35,9 +33,8 @@ async def predict_disease(file: UploadFile = File(...)):
                 "message": f"Invalid file type. Allowed: {', '.join(ALLOWED_CONTENT_TYPES)}",
             },
         )
-
     try:
-        image = Image.open(file.file).convert("RGB")
+        return Image.open(file.file).convert("RGB")
     except Exception as e:
         raise HTTPException(
             status_code=422,
@@ -48,9 +45,22 @@ async def predict_disease(file: UploadFile = File(...)):
             },
         )
 
+
+@router.post("/predict")
+async def predict_disease(file: UploadFile = File(...)):
+    image = _decode_upload_image(file)
+
     try:
-        result = predict(image)
+        result = run_prediction(image, with_reasoning=False)
         return result
+    except ValueError as e:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "status": "Failure",
+                "message": str(e),
+            },
+        )
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -72,29 +82,18 @@ async def predict_with_reasoning(file: UploadFile = File(...)):
     Same as POST /predict, but adds an optional LLM reasoning layer when OPENAI_API_KEY is set.
     Returns prediction + agent_decision + llm_reasoning (reasoning, recommendation, verdict).
     """
-    if file.content_type and file.content_type not in ALLOWED_CONTENT_TYPES:
+    image = _decode_upload_image(file)
+
+    try:
+        result = run_prediction(image, with_reasoning=True)
+    except ValueError as e:
         raise HTTPException(
             status_code=422,
             detail={
                 "status": "Failure",
-                "message": f"Invalid file type. Allowed: {', '.join(ALLOWED_CONTENT_TYPES)}",
+                "message": str(e),
             },
         )
-
-    try:
-        image = Image.open(file.file).convert("RGB")
-    except Exception as e:
-        raise HTTPException(
-            status_code=422,
-            detail={
-                "status": "Failure",
-                "message": "Could not decode image. Ensure the file is a valid image.",
-                "error": str(e),
-            },
-        )
-
-    try:
-        result = predict(image)
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -105,12 +104,5 @@ async def predict_with_reasoning(file: UploadFile = File(...)):
                 "error": str(e),
             },
         )
-
-    # Optional LLM reasoning (RAG over diagnostics + knowledge)
-    if REASONING_ENABLED:
-        llm = reason(result)
-        result["llm_reasoning"] = llm
-    else:
-        result["llm_reasoning"] = None  # Set OPENAI_API_KEY to enable
 
     return result

@@ -27,6 +27,12 @@ router.get('/products', async (req, res, next) => {
     const products = await shop.getProducts({
       categoryId: req.query.categoryId,
       q: req.query.q,
+      minPrice: req.query.minPrice,
+      maxPrice: req.query.maxPrice,
+      inStock: req.query.inStock,
+      sort: req.query.sort,
+      limit: req.query.limit,
+      offset: req.query.offset,
     });
     res.json(products);
   } catch (e) {

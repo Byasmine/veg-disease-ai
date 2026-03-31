@@ -1,0 +1,10 @@
+{
+  "model_version": "2.0.0",
+  "model_file": "model_v2.onnx",
+  "dataset_version": "tomato_dataset_v2",
+  "framework": "pytorch+timm",
+  "export_format": "onnx",
+  "input_size": "3x224x224",
+  "classes": 11,
+  "notes": "Production metadata for runtime introspection and rollout traceability."
+}

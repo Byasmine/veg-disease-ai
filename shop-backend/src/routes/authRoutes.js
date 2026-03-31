@@ -32,7 +32,7 @@ router.post('/change-password', requireAuth, async (req, res, next) => {
     next(e);
   }
 });
-
+// pour recuperer les informations de l'utilisateur connecte
 router.get('/me', requireAuth, async (req, res, next) => {
   try {
     const user = await fetchUserById(req.user.id);
